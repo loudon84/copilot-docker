@@ -1,0 +1,41 @@
+services:
+  hermes-agent-webui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        HERMES_WEBUI_IMAGE: ${HERMES_WEBUI_IMAGE:-ghcr.io/nesquena/hermes-webui:latest}
+        HERMES_AGENT_REPO: ${HERMES_AGENT_REPO:-http://git.superic.com/aiplatform/hermes-agent.git}
+        HERMES_AGENT_REF: ${HERMES_AGENT_REF:-main}
+    image: ${LOCAL_IMAGE_NAME:-hermes-agent-webui:obsidian-hindsight}
+    container_name: hermes-${HERMES_PROFILE:-default}
+    restart: unless-stopped
+    ports:
+      - "${HERMES_WEBUI_BIND:-0.0.0.0}:${HERMES_WEBUI_PORT:-8787}:8787"
+    environment:
+      WANTED_UID: ${UID:-1000}
+      WANTED_GID: ${GID:-1000}
+      HERMES_PROFILE: ${HERMES_PROFILE:-default}
+      HERMES_EXPERT: ${HERMES_EXPERT:-base}
+      HERMES_HOME: /data/hermes
+      HERMES_CONFIG_PATH: /data/hermes/config.yaml
+      HERMES_WEBUI_HOST: 0.0.0.0
+      HERMES_WEBUI_PORT: 8787
+      HERMES_WEBUI_STATE_DIR: /data/hermes/webui
+      HERMES_WEBUI_DEFAULT_WORKSPACE: /data/hermes/workspace
+      HERMES_WEBUI_AGENT_DIR: /opt/hermes-agent
+      HERMES_WEBUI_AUTO_INSTALL: 1
+      HERMES_WEBUI_PASSWORD: ${HERMES_WEBUI_PASSWORD:?HERMES_WEBUI_PASSWORD is required}
+      HERMES_SKIP_CHMOD: ${HERMES_SKIP_CHMOD:-0}
+      HINDSIGHT_MODE: local_external
+      HINDSIGHT_API_URL: ${HINDSIGHT_API_URL:-http://hindsight.superic.com:8888}
+      HINDSIGHT_BANK_ID: ${HINDSIGHT_BANK_ID:-hermes-${HERMES_PROFILE:-default}}
+    volumes:
+      - ./instances/${HERMES_PROFILE:-default}/data/hermes:/data/hermes
+    shm_size: "1gb"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8787/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s

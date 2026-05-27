@@ -1,0 +1,14 @@
+{
+  "mode": "local_external",
+  "api_url": "__HINDSIGHT_API_URL__",
+  "bank_id_template": "hermes-{profile}",
+  "bank_id": "hermes-__PROFILE__",
+  "recall_budget": "mid",
+  "recall_prefetch_method": "recall",
+  "recall_max_tokens": 4096,
+  "auto_recall": true,
+  "auto_retain": true,
+  "retain_async": true,
+  "retain_every_n_turns": 1,
+  "memory_mode": "hybrid"
+}

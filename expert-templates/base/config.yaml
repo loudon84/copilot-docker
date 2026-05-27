@@ -1,0 +1,58 @@
+model:
+  provider: openai
+  default: "${OPENAI_MODEL:-gpt-4o-mini}"
+  base_url: "${OPENAI_BASE_URL:-https://api.openai.com/v1}"
+  api_key: "${OPENAI_API_KEY}"
+
+memory:
+  memory_enabled: true
+  user_profile_enabled: true
+  memory_char_limit: 2200
+  user_char_limit: 1375
+  provider: hindsight
+
+terminal:
+  backend: local
+  cwd: /data/hermes/workspace
+  timeout: 180
+  persistent_shell: false
+
+skills:
+  guard_agent_created: true
+  external_dirs: []
+  config:
+    obsidian:
+      enabled: true
+      vault_path: /data/hermes/obsidian-vault
+      inbox_dir: 00-Inbox
+      article_dir: 10-Articles
+      research_dir: 20-Research
+      template_dir: 30-Templates
+      policy_dir: 50-Policies
+      report_dir: 60-Reports
+      archive_dir: 90-Archive
+      default_tags:
+        - hermes
+        - __PROFILE__
+
+platform_toolsets:
+  cli:
+    - web
+    - file
+    - skills
+    - session_search
+    - todo
+    - clarify
+    - terminal
+
+compression:
+  enabled: true
+  threshold: 0.50
+  target_ratio: 0.20
+  protect_last_n: 20
+
+file_read_max_chars: 100000
+tool_output:
+  max_bytes: 50000
+  max_lines: 2000
+  max_line_length: 2000
