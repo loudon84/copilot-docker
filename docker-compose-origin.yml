@@ -1,26 +1,13 @@
-# Hermes WebUI + Agent + Hindsight + GBrain runtime.
-# Usage:
-#   bash scripts/create-instance.sh writer 9601 writer
-#   docker compose --env-file instances/writer/.env -p hermes-writer build
-#   docker compose --env-file instances/writer/.env -p hermes-writer up -d
-
 services:
   hermes-agent-webui:
     build:
       context: .
       dockerfile: Dockerfile
       args:
-        HERMES_WEBUI_REPO: ${HERMES_WEBUI_REPO:-http://git.superic.com/aiplatform/hermes-webui.git}
-        HERMES_WEBUI_REF: ${HERMES_WEBUI_REF:-master}
+        HERMES_WEBUI_IMAGE: ${HERMES_WEBUI_IMAGE:-ghcr.io/nesquena/hermes-webui:latest}
         HERMES_AGENT_REPO: ${HERMES_AGENT_REPO:-http://git.superic.com/aiplatform/hermes-agent.git}
-        HERMES_AGENT_REF: ${HERMES_AGENT_REF:-master}
-        HERMES_VERSION: ${HERMES_VERSION:-git-build}
-        INSTALL_GBRAIN: ${INSTALL_GBRAIN:-1}
-        GBRAIN_REPO: ${GBRAIN_REPO:-github:garrytan/gbrain}
-        INSTALL_FILESYSTEM_MCP: ${INSTALL_FILESYSTEM_MCP:-1}
-        INSTALL_CLAWSEC: ${INSTALL_CLAWSEC:-0}
-        CLAWSEC_REPO: ${CLAWSEC_REPO:-https://github.com/prompt-security/clawsec.git}
-    image: ${LOCAL_IMAGE_NAME:-hermes-agent-webui:self-evolution}
+        HERMES_AGENT_REF: ${HERMES_AGENT_REF:-main}
+    image: ${LOCAL_IMAGE_NAME:-hermes-agent-webui:obsidian-hindsight}
     container_name: hermes-${HERMES_PROFILE:-default}
     restart: unless-stopped
     ports:
@@ -40,21 +27,9 @@ services:
       HERMES_WEBUI_AUTO_INSTALL: 1
       HERMES_WEBUI_PASSWORD: ${HERMES_WEBUI_PASSWORD:?HERMES_WEBUI_PASSWORD is required}
       HERMES_SKIP_CHMOD: ${HERMES_SKIP_CHMOD:-0}
-
-      # External memory provider: shared Hindsight service.
       HINDSIGHT_MODE: local_external
       HINDSIGHT_API_URL: ${HINDSIGHT_API_URL:-http://hindsight.superic.com:8888}
       HINDSIGHT_BANK_ID: ${HINDSIGHT_BANK_ID:-hermes-${HERMES_PROFILE:-default}}
-
-      # Brain / vault / skills paths.
-      GBRAIN_ENABLED: ${GBRAIN_ENABLED:-1}
-      GBRAIN_HOME: /data/hermes/gbrain
-      GBRAIN_VAULT: /data/hermes/obsidian-vault
-      HERMES_VAULT_PATH: /data/hermes/obsidian-vault
-      HERMES_SKILLS_PATH: /data/hermes/skills
-      HERMES_WORKSPACE_PATH: /data/hermes/workspace
-      HERMES_CURATOR_ENABLED: ${HERMES_CURATOR_ENABLED:-1}
-      HERMES_SELF_EVOLUTION_ENABLED: ${HERMES_SELF_EVOLUTION_ENABLED:-0}
     volumes:
       - ./instances/${HERMES_PROFILE:-default}/data/hermes:/data/hermes
     shm_size: "1gb"

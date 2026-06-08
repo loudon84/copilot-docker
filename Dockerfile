@@ -1,8 +1,88 @@
-ARG HERMES_WEBUI_IMAGE=ghcr.io/nesquena/hermes-webui:latest
-ARG HERMES_AGENT_REPO=https://github.com/NousResearch/hermes-agent.git
-ARG HERMES_AGENT_REF=main
+# Hermes WebUI + Agent 从 git.superic.com 构建（见 docker-compose.yml）
 
-FROM ${HERMES_WEBUI_IMAGE}
+ARG HERMES_WEBUI_REPO=http://git.superic.com/aiplatform/hermes-webui.git
+ARG HERMES_WEBUI_REF=master
+
+# ── Stage 1: clone hermes-webui ──────────────────────────────────────────────
+FROM python:3.12-slim AS webui-clone
+ARG HERMES_WEBUI_REPO
+ARG HERMES_WEBUI_REF
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends git ca-certificates \
+  && rm -rf /var/lib/apt/lists/* \
+  && git clone --depth=1 --branch "${HERMES_WEBUI_REF}" "${HERMES_WEBUI_REPO}" /src
+
+# ── Stage 2: hermes-webui 基础镜像（对齐官方 Dockerfile 结构）────────────────
+FROM python:3.12-slim AS hermes-webui-base
+
+LABEL maintainer="superic"
+LABEL description="Hermes WebUI — built from Git source"
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+ARG BUILD_APT_PROXY=
+RUN if [ "A${BUILD_APT_PROXY:-}" != "A" ]; then \
+      printf 'Acquire::http::Proxy "%s";\n' "$BUILD_APT_PROXY" > /etc/apt/apt.conf.d/01proxy; \
+    fi \
+  && apt-get update \
+  && apt-get install -y --no-install-recommends ca-certificates wget gnupg \
+  && rm -rf /var/lib/apt/lists/* \
+  && apt-get clean
+
+RUN apt-get update -y --fix-missing --no-install-recommends \
+  && apt-get install -y --no-install-recommends \
+    apt-utils locales ca-certificates sudo curl rsync openssh-client \
+  && apt-get upgrade -y \
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
+ENV LANG=en_US.utf8
+ENV LC_ALL=C
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONIOENCODING=utf-8
+
+WORKDIR /apptoo
+
+RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers \
+  && groupadd -g 1024 hermeswebui \
+  && groupadd -g 1025 hermeswebuitoo \
+  && useradd -u 1024 -d /home/hermeswebui -g hermeswebui -s /bin/bash -m hermeswebui \
+  && usermod -G users hermeswebui \
+  && adduser hermeswebui sudo \
+  && useradd -u 1025 -d /home/hermeswebuitoo -g hermeswebuitoo -s /bin/bash -m hermeswebuitoo \
+  && usermod -G users hermeswebuitoo \
+  && adduser hermeswebuitoo sudo \
+  && chown -R hermeswebuitoo:hermeswebuitoo /apptoo
+
+COPY --from=webui-clone /src/docker_init.bash /hermeswebui_init.bash
+RUN chmod 555 /hermeswebui_init.bash
+
+RUN touch /.within_container \
+  && rm -rf /var/lib/apt/lists/* /etc/apt/apt.conf.d/01proxy \
+  && apt-get clean
+
+RUN curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin sh
+
+USER hermeswebuitoo
+
+COPY --from=webui-clone --chown=hermeswebuitoo:hermeswebuitoo /src /apptoo
+
+ARG HERMES_VERSION=git-build
+RUN echo "__version__ = '${HERMES_VERSION}'" > /apptoo/api/_version.py
+
+ENV HERMES_WEBUI_HOST=0.0.0.0
+ENV HERMES_WEBUI_PORT=8787
+
+EXPOSE 8787
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD curl -f http://localhost:8787/health || exit 1
+
+# ── Stage 3: 扩展层（hermes-agent + 运行工具，与原 Dockerfile 一致）──────────
+FROM hermes-webui-base
 
 USER root
 ENV DEBIAN_FRONTEND=noninteractive
@@ -11,24 +91,63 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends \
     build-essential python3-dev libffi-dev \
     git openssh-client curl ca-certificates jq \
-    nodejs npm ripgrep ffmpeg procps xz-utils \
+    nodejs npm ripgrep ffmpeg procps xz-utils unzip \
   && rm -rf /var/lib/apt/lists/*
 
-ARG HERMES_AGENT_REPO
-ARG HERMES_AGENT_REF
+ARG HERMES_AGENT_REPO=http://git.superic.com/aiplatform/hermes-agent.git
+ARG HERMES_AGENT_REF=master
 RUN git clone --depth=1 --branch "${HERMES_AGENT_REF}" "${HERMES_AGENT_REPO}" /opt/hermes-agent \
   && chmod -R a+rX /opt/hermes-agent
 
-ENV HERMES_WEBUI_HOST=0.0.0.0
-ENV HERMES_WEBUI_PORT=8787
+# Install hermes-agent into the same Python venv used by hermes-webui.
+# WebUI uses /app/venv/bin/python; adding /opt/hermes-agent to sys.path is not enough
+# because AIAgent is imported from the installed/editable project metadata.
+RUN python3 -m venv /app/venv \
+  && /app/venv/bin/python -m pip install --upgrade pip setuptools wheel \
+  && cd /opt/hermes-agent \
+  && (/app/venv/bin/python -m pip install -e ".[all]" || /app/venv/bin/python -m pip install -e .) \
+  && /app/venv/bin/python - <<'PY'
+from run_agent import AIAgent
+print("OK: hermes-agent AIAgent importable from /app/venv")
+PY
+
+# Optional GBrain and MCP runtime tooling. Use internal mirrors in production.
+ARG INSTALL_GBRAIN=1
+ARG GBRAIN_REPO=github:garrytan/gbrain
+RUN if [ "${INSTALL_GBRAIN}" = "1" ]; then \
+      (curl -fsSL https://bun.sh/install | bash -s -- bun-v1.2.15 \
+        && ln -sf /root/.bun/bin/bun /usr/local/bin/bun \
+        && ln -sf /root/.bun/bin/bunx /usr/local/bin/bunx \
+        && bun install -g "${GBRAIN_REPO}" \
+        && echo "OK: gbrain installed") \
+      || echo "WARN: gbrain install failed; init-brain-runtime.sh will skip gbrain."; \
+    fi
+
+ARG INSTALL_FILESYSTEM_MCP=1
+RUN if [ "${INSTALL_FILESYSTEM_MCP}" = "1" ]; then \
+      npm install -g @modelcontextprotocol/server-filesystem \
+      || echo "WARN: filesystem MCP global install failed; npx fallback may still work."; \
+    fi
+
+ARG INSTALL_CLAWSEC=0
+ARG CLAWSEC_REPO=https://github.com/prompt-security/clawsec.git
+RUN if [ "${INSTALL_CLAWSEC}" = "1" ]; then \
+      git clone --depth=1 "${CLAWSEC_REPO}" /opt/clawsec \
+      || echo "WARN: clawsec clone failed; install-security-skills.sh will install fallback local security skills."; \
+    fi
+
 ENV HERMES_WEBUI_AGENT_DIR=/opt/hermes-agent
 ENV HERMES_WEBUI_AUTO_INSTALL=1
 ENV HERMES_HOME=/data/hermes
 ENV HERMES_CONFIG_PATH=/data/hermes/config.yaml
 ENV HERMES_WEBUI_DEFAULT_WORKSPACE=/data/hermes/workspace
 ENV HERMES_WEBUI_STATE_DIR=/data/hermes/webui
+ENV GBRAIN_HOME=/data/hermes/gbrain
+ENV GBRAIN_VAULT=/data/hermes/obsidian-vault
 
 RUN mkdir -p /data/hermes /workspace /uv_cache /app \
   && chown -R hermeswebui:hermeswebui /data /workspace /uv_cache /app || true
 
 EXPOSE 8787
+
+CMD ["/hermeswebui_init.bash"]

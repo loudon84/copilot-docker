@@ -1,3 +1,3 @@
-§ 用户偏好：输出工程化、结构化、可执行方案；禁止多余铺垫。
-§ 用户偏好文档形态：PRD、SPEC、实施计划、架构说明、Cursor 可执行稿、Markdown、Obsidian 知识文档。
-§ 用户不接受：AI 腔、泛泛建议、无边界方案、没有文件结构、没有验收标准的方案。
+# USER
+
+This Hermes profile is deployed for internal enterprise agent workflows.

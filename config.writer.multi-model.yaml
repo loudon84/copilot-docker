@@ -1,0 +1,219 @@
+# Hermes writer profile - multi-model routing
+# Path in container: /data/hermes/config.yaml
+# Host path: /data/hermes/instances/writer/data/hermes/config.yaml
+
+# =========================
+# Main conversation model
+# 用于写作、长文、方案、PRD、内容生成
+# =========================
+model:
+  provider: custom:doubao-writer
+  default: doubao-seed-2-0-pro-260215
+  context_length: 131072
+  max_tokens: 8192
+
+# =========================
+# Named custom providers
+# 所有接口按 OpenAI-compatible Chat Completions 方式接入
+# =========================
+custom_providers:
+  - name: doubao-writer
+    base_url: https://ark.cn-beijing.volces.com/api/v3
+    key_env: DOUBAO_API_KEY
+    api_mode: chat_completions
+    model: doubao-seed-2-0-pro-260215
+    models:
+      doubao-seed-2-0-pro-260215:
+        context_length: 131072
+        max_tokens: 8192
+
+  - name: qianfan-extract
+    # 注意：Hermes/OpenAI SDK 的 base_url 不要写到 /chat/completions
+    # 用户给出的完整接口 https://qianfan.baidubce.com/v2/chat/completions
+    # 这里应写根路径 https://qianfan.baidubce.com/v2
+    base_url: https://qianfan.baidubce.com/v2
+    key_env: QIANFAN_API_KEY
+    api_mode: chat_completions
+    model: ernie-5.1
+    models:
+      ernie-5.1:
+        context_length: 131072
+        max_tokens: 8192
+
+  - name: siliconflow-fast
+    base_url: https://api.siliconflow.cn/v1
+    key_env: SILICONFLOW_API_KEY
+    api_mode: chat_completions
+    model: deepseek-ai/DeepSeek-V4-Flash
+    models:
+      deepseek-ai/DeepSeek-V4-Flash:
+        context_length: 131072
+        max_tokens: 8192
+
+  - name: ollama-local
+    base_url: http://ollama.superic.com:11434/v1
+    key_env: OLLAMA_API_KEY
+    api_mode: chat_completions
+    model: gemma4:26b
+    models:
+      gemma4:26b:
+        context_length: 32768
+        max_tokens: 8192
+
+# =========================
+# Auxiliary task routing
+# =========================
+auxiliary:
+  # 网页资料抽取、网页摘要、搜索材料整理
+  web_extract:
+    provider: qianfan-extract
+    model: ernie-5.1
+    timeout: 360
+
+  # 标题、会话标题、轻量分类
+  title_generation:
+    provider: siliconflow-fast
+    model: deepseek-ai/DeepSeek-V4-Flash
+    timeout: 90
+
+  # Skill 搜索、Skill 匹配、轻量判断
+  skills_hub:
+    provider: siliconflow-fast
+    model: deepseek-ai/DeepSeek-V4-Flash
+    timeout: 90
+
+  # MCP/工具调度辅助
+  mcp:
+    provider: siliconflow-fast
+    model: deepseek-ai/DeepSeek-V4-Flash
+    timeout: 90
+
+  # 审批、风险提示、低成本判断
+  approval:
+    provider: siliconflow-fast
+    model: deepseek-ai/DeepSeek-V4-Flash
+    timeout: 60
+
+  # 上下文压缩摘要
+  compression:
+    provider: siliconflow-fast
+    model: deepseek-ai/DeepSeek-V4-Flash
+    context_length: 131072
+    timeout: 180
+
+# =========================
+# Fallback chain
+# 主模型异常时按顺序切换，不丢会话
+# =========================
+fallback_providers:
+  - provider: siliconflow-fast
+    model: deepseek-ai/DeepSeek-V4-Flash
+    api_mode: chat_completions
+  - provider: ollama-local
+    model: gemma4:26b
+    api_mode: chat_completions
+
+# =========================
+# Provider timeout tuning
+# =========================
+providers:
+  doubao-writer:
+    request_timeout_seconds: 600
+    stale_timeout_seconds: 240
+    models:
+      doubao-seed-2-0-pro-260215:
+        timeout_seconds: 600
+        stale_timeout_seconds: 240
+  qianfan-extract:
+    request_timeout_seconds: 360
+    stale_timeout_seconds: 180
+    models:
+      ernie-5.1:
+        timeout_seconds: 360
+        stale_timeout_seconds: 180
+  siliconflow-fast:
+    request_timeout_seconds: 240
+    stale_timeout_seconds: 120
+    models:
+      deepseek-ai/DeepSeek-V4-Flash:
+        timeout_seconds: 240
+        stale_timeout_seconds: 120
+  ollama-local:
+    request_timeout_seconds: 1800
+    stale_timeout_seconds: 1800
+    models:
+      gemma4:26b:
+        timeout_seconds: 1800
+        stale_timeout_seconds: 1800
+
+# =========================
+# Memory / Hindsight
+# =========================
+memory:
+  memory_enabled: true
+  user_profile_enabled: true
+  memory_char_limit: 2200
+  user_char_limit: 1375
+  provider: hindsight
+
+# =========================
+# Terminal / Workspace
+# =========================
+terminal:
+  backend: local
+  cwd: /data/hermes/workspace
+  timeout: 180
+  persistent_shell: false
+
+# =========================
+# Skills / Obsidian Vault
+# =========================
+skills:
+  guard_agent_created: true
+  external_dirs: []
+  config:
+    obsidian:
+      enabled: true
+      vault_path: /data/hermes/obsidian-vault
+      inbox_dir: 00-Inbox
+      article_dir: 10-Articles
+      research_dir: 20-Research
+      template_dir: 30-Templates
+      policy_dir: 50-Policies
+      report_dir: 60-Reports
+      archive_dir: 90-Archive
+      default_tags:
+        - hermes
+        - writer
+
+# =========================
+# Tools
+# =========================
+platform_toolsets:
+  cli:
+    - web
+    - file
+    - skills
+    - session_search
+    - todo
+    - clarify
+    - terminal
+
+# =========================
+# Context compression policy
+# =========================
+compression:
+  enabled: true
+  threshold: 0.50
+  target_ratio: 0.20
+  protect_last_n: 20
+  hygiene_hard_message_limit: 400
+
+# =========================
+# File / Tool output limits
+# =========================
+file_read_max_chars: 100000
+tool_output:
+  max_bytes: 50000
+  max_lines: 2000
+  max_line_length: 2000
