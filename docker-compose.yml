@@ -17,18 +17,18 @@ services:
         HERMES_AGENT_REF: ${HERMES_AGENT_REF:-master}
         HERMES_VERSION: ${HERMES_VERSION:-git-build}
         INSTALL_GBRAIN: ${INSTALL_GBRAIN:-1}
-        GBRAIN_REPO: ${GBRAIN_REPO:-github:garrytan/gbrain}
+        GBRAIN_REPO: ${GBRAIN_REPO:-http://git.superic.com/aiplatform/gbrain.git}
         INSTALL_FILESYSTEM_MCP: ${INSTALL_FILESYSTEM_MCP:-1}
         INSTALL_CLAWSEC: ${INSTALL_CLAWSEC:-0}
-        CLAWSEC_REPO: ${CLAWSEC_REPO:-https://github.com/prompt-security/clawsec.git}
+        CLAWSEC_REPO: ${CLAWSEC_REPO:-http://git.superic.com/aiplatform/clawsec.git}
     image: ${LOCAL_IMAGE_NAME:-hermes-agent-webui:lastest}
     container_name: hermes-${HERMES_PROFILE:-default}
     restart: unless-stopped
     ports:
       - "${HERMES_WEBUI_BIND:-0.0.0.0}:${HERMES_WEBUI_PORT:-8787}:8787"
     environment:
-      WANTED_UID: ${UID:-1000}
-      WANTED_GID: ${GID:-1000}
+      WANTED_UID: "1000"
+      WANTED_GID: "1000"
       HERMES_PROFILE: ${HERMES_PROFILE:-default}
       HERMES_EXPERT: ${HERMES_EXPERT:-base}
       HERMES_HOME: /data/hermes
@@ -54,10 +54,14 @@ services:
       HERMES_VAULT_PATH: /data/hermes/obsidian-vault
       HERMES_SKILLS_PATH: /data/hermes/skills
       HERMES_WORKSPACE_PATH: /data/hermes/workspace
+      HERMES_TOOLS_PATH: /data/hermes/tools
+      HERMES_PLUGINS_PATH: /data/hermes/plugins
       HERMES_CURATOR_ENABLED: ${HERMES_CURATOR_ENABLED:-1}
       HERMES_SELF_EVOLUTION_ENABLED: ${HERMES_SELF_EVOLUTION_ENABLED:-0}
     volumes:
       - ./instances/${HERMES_PROFILE:-default}/data/hermes:/data/hermes
+      - ./instances/${HERMES_PROFILE:-default}/data/hermes/tools:/home/hermeswebui/.hermes/tools
+      - ./instances/${HERMES_PROFILE:-default}/data/hermes/plugins:/home/hermeswebui/.hermes/plugins
     shm_size: "1gb"
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8787/health || exit 1"]

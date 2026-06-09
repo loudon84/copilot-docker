@@ -92,3 +92,9 @@ bash scripts/doctor-local-registry.sh
         ├── .env
         └── data/hermes/
 ```
+
+## Hermes Asset Bundles
+
+用于从成熟实例导出 skills、tools、plugins、mcp 能力包，并导入到新同事实例。
+
+详见 [README_ASSET_BUNDLES.md](README_ASSET_BUNDLES.md)。

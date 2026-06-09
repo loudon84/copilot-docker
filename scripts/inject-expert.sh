@@ -26,6 +26,13 @@ if [ "$PRESERVE_FULL_CONFIG" = "0" ]; then
   [ -f "$DATA_DIR/config.yaml" ] && mkdir -p "$DATA_DIR/.backup/$TS" && cp "$DATA_DIR/config.yaml" "$DATA_DIR/.backup/$TS/config.yaml"
 fi
 
+for d in skills tools plugins mcp policies skill-bundles; do
+  if [ -d "$DATA_DIR/$d" ]; then
+    mkdir -p "$DATA_DIR/.backup/$TS"
+    cp -a "$DATA_DIR/$d" "$DATA_DIR/.backup/$TS/$d"
+  fi
+done
+
 cp -R "$TPL_BASE/." "$DATA_DIR/"
 cp -R "$TPL_EXPERT/." "$DATA_DIR/"
 
@@ -43,6 +50,8 @@ done
 bash "$BASE_DIR/scripts/patch-config-runtime.sh" "$PROFILE"
 
 mkdir -p \
+  "$DATA_DIR/tools" \
+  "$DATA_DIR/plugins" \
   "$DATA_DIR/workspace/materials" \
   "$DATA_DIR/workspace/references" \
   "$DATA_DIR/workspace/drafts" \

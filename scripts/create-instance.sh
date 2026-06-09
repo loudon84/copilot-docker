@@ -30,6 +30,8 @@ mkdir -p \
   "$DATA_DIR/obsidian-vault/90-Archive" \
   "$DATA_DIR/memories" \
   "$DATA_DIR/skills" \
+  "$DATA_DIR/tools" \
+  "$DATA_DIR/plugins" \
   "$DATA_DIR/hindsight" \
   "$DATA_DIR/gbrain" \
   "$DATA_DIR/evolution/runs" \
@@ -45,8 +47,8 @@ mkdir -p \
 if [ ! -f "$INSTANCE_DIR/.env" ]; then
   PASS="$(openssl rand -base64 32 | tr -d '/+=' | cut -c1-24)"
   cat > "$INSTANCE_DIR/.env" <<EOF_ENV
-UID=$(id -u)
-GID=$(id -g)
+UID=1000
+GID=1000
 HERMES_WEBUI_REPO=http://git.superic.com/aiplatform/hermes-webui.git
 HERMES_WEBUI_REF=master
 HERMES_AGENT_REPO=http://git.superic.com/aiplatform/hermes-agent.git
@@ -71,6 +73,10 @@ HERMES_SELF_EVOLUTION_ENABLED=0
 EOF_ENV
   chmod 600 "$INSTANCE_DIR/.env"
 fi
+
+chown -R 1000:1000 "$DATA_DIR" 2>/dev/null || true
+chmod -R u+rwX,g+rwX "$DATA_DIR" 2>/dev/null || true
+chmod 600 "$INSTANCE_DIR/.env" 2>/dev/null || true
 
 bash "$BASE_DIR/scripts/inject-expert.sh" "$PROFILE" "$EXPERT"
 

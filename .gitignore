@@ -14,3 +14,7 @@ $RECYCLE.BIN/
 # 本地镜像仓库凭据/配置（勿提交）
 registry.env
 local-registry.env
+
+# Asset bundles - exclude binary archives and pip freeze snapshots
+asset-bundles/*/*.tgz
+asset-bundles/*/pip-freeze.txt
