@@ -151,6 +151,9 @@ RUN mkdir -p /data/hermes /workspace /uv_cache /app \
       /data /workspace /uv_cache /app /app/venv /home/hermeswebui/.hermes /opt/hermes-agent \
   && chmod -R u+rwX,g+rwX /data /workspace /uv_cache /app /app/venv /home/hermeswebui/.hermes
 
+
+USER hermeswebui
+
 EXPOSE 8787
 
 CMD ["/hermeswebui_init.bash"]
