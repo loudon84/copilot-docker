@@ -16,6 +16,8 @@ scripts/
   install-security-skills.sh
   install-self-evolution.sh
   bootstrap-self-evolution-stack.sh
+  build-push-registry.sh
+registry.env.example
 expert-templates/
   base/
   default/
@@ -273,3 +275,82 @@ Security Skills: prompt and workspace boundary audit
 3. 不允许 self-evolution 自动覆盖 `/data/hermes/skills`。
 4. 新 skill 必须先经过 `skill-audit`。
 5. 先在 writer/profile 测试，再扩展 finance/default。
+
+## 14. 一键构建推送到火山引擎（nodeskclaw）
+
+将 Hermes 专家服务镜像构建并推送到火山引擎镜像仓库，供 nodeskclaw 按版本拉取部署。
+
+### 14.1 准备配置
+
+```bash
+cd copilot-docker
+cp registry.env.example registry.env
+```
+
+编辑 `registry.env`：
+
+```text
+IMAGE_REPO=cr.volces.com/<namespace>/hermes-webui-expert
+IMAGE_TAG=v2026.6.8
+REGISTRY_HOST=cr.volces.com
+```
+
+### 14.2 登录并构建推送
+
+```bash
+bash scripts/build-push-registry.sh --login
+```
+
+脚本等价于：
+
+```bash
+docker login cr.volces.com
+
+docker buildx build \
+  --platform linux/amd64 \
+  -t "${IMAGE_REPO}:${IMAGE_TAG}" \
+  --build-arg HERMES_WEBUI_REPO="http://git.superic.com/aiplatform/hermes-webui.git" \
+  --build-arg HERMES_WEBUI_REF="master" \
+  --build-arg HERMES_AGENT_REPO="http://git.superic.com/aiplatform/hermes-agent.git" \
+  --build-arg HERMES_AGENT_REF="master" \
+  --build-arg HERMES_VERSION="${IMAGE_TAG}" \
+  --build-arg INSTALL_GBRAIN=1 \
+  --build-arg INSTALL_FILESYSTEM_MCP=1 \
+  --build-arg INSTALL_CLAWSEC=0 \
+  --push \
+  .
+```
+
+其他选项：
+
+```bash
+# 只预览命令
+bash scripts/build-push-registry.sh --dry-run
+
+# 指定版本号
+bash scripts/build-push-registry.sh --login --tag v2026.3.13
+
+# 仅本地构建不推送（调试用）
+bash scripts/build-push-registry.sh --no-push
+```
+
+### 14.3 nodeskclaw 配置
+
+推送成功后，在 nodeskclaw 控制台配置：
+
+| 位置 | 填写内容 |
+|------|----------|
+| 组织设置 → 镜像仓库 → Hermes 专家服务 | `<your-registry>/<namespace>/hermes-webui-expert` |
+| 组织设置 → 引擎版本 → Hermes 专家服务 → 发布新版本 | `v2026.6.8`（与 `IMAGE_TAG` 一致） |
+
+部署时 nodeskclaw 将拉取：
+
+```text
+<your-registry>/<namespace>/hermes-webui-expert:v2026.6.8
+```
+
+### 14.4 构建机要求
+
+- 已安装 `docker` + `docker buildx`（见 `scripts/install-docker-ubuntu24.sh`）
+- 构建期可访问 `git.superic.com` 上的 hermes-webui / hermes-agent
+- 若启用 GBrain，构建机需能访问 `GBRAIN_REPO`（或改为内网 mirror）

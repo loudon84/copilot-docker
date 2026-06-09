@@ -47,6 +47,16 @@ bash scripts/restart-instance.sh writer
 bash scripts/restart-instance.sh finance
 ```
 
+## 推送到火山引擎（nodeskclaw）
+
+```bash
+cp registry.env.example registry.env
+# 编辑 IMAGE_REPO、IMAGE_TAG
+bash scripts/build-push-registry.sh --login
+```
+
+详见 [README_DEPLOY.md §14](README_DEPLOY.md#14-一键构建推送到火山引擎nodeskclaw)。
+
 ## 目录
 
 ```text

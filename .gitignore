@@ -10,3 +10,6 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+
+# 本地镜像仓库凭据/配置（勿提交）
+registry.env
