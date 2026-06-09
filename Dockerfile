@@ -25,15 +25,14 @@ RUN if [ "A${BUILD_APT_PROXY:-}" != "A" ]; then \
       printf 'Acquire::http::Proxy "%s";\n' "$BUILD_APT_PROXY" > /etc/apt/apt.conf.d/01proxy; \
     fi \
   && apt-get update \
-  && apt-get install -y --no-install-recommends ca-certificates wget gnupg \
+  && apt-get install -y --no-install-recommends \
+    ca-certificates wget gnupg \
+    apt-utils locales sudo curl rsync openssh-client \
+    build-essential python3-dev libffi-dev \
+    git jq \
+    nodejs npm ripgrep ffmpeg procps xz-utils unzip \
   && rm -rf /var/lib/apt/lists/* \
   && apt-get clean
-
-RUN apt-get update -y --fix-missing --no-install-recommends \
-  && apt-get install -y --no-install-recommends \
-    apt-utils locales ca-certificates sudo curl rsync openssh-client \
-  && apt-get clean \
-  && rm -rf /var/lib/apt/lists/*
 
 RUN localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
 ENV LANG=en_US.utf8
@@ -81,17 +80,11 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD curl -f http://localhost:8787/health || exit 1
 
 # ── Stage 3: 扩展层（hermes-agent + 运行工具，与原 Dockerfile 一致）──────────
+# 系统依赖已在 Stage 2 一次性安装，此处不再 apt-get update。
 FROM hermes-webui-base
 
 USER root
 ENV DEBIAN_FRONTEND=noninteractive
-
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends \
-    build-essential python3-dev libffi-dev \
-    git openssh-client curl ca-certificates jq \
-    nodejs npm ripgrep ffmpeg procps xz-utils unzip \
-  && rm -rf /var/lib/apt/lists/*
 
 ARG HERMES_AGENT_REPO=http://git.superic.com/aiplatform/hermes-agent.git
 ARG HERMES_AGENT_REF=master

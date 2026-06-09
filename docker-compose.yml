@@ -1,8 +1,8 @@
 # Hermes WebUI + Agent + Hindsight + GBrain runtime.
 # Usage:
+#   bash scripts/build-image.sh                         # build once (shared by all instances)
 #   bash scripts/create-instance.sh writer 9601 writer
-#   docker compose --env-file instances/writer/.env -p hermes-writer build
-#   docker compose --env-file instances/writer/.env -p hermes-writer up -d
+#   bash scripts/up-instance.sh writer                  # reuses image, no rebuild
 
 services:
   hermes-agent-webui:

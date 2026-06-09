@@ -18,9 +18,10 @@ sudo unzip hermes-agent-webui-obsidian-hindsight-kit.zip -d /opt
 cd /opt/hermes-agent-webui
 
 sudo bash scripts/install-docker-ubuntu24.sh
+bash scripts/build-image.sh
 bash scripts/create-instance.sh writer 8787 writer
-bash scripts/create-instance.sh finance 8788 finance
 bash scripts/up-instance.sh writer
+bash scripts/create-instance.sh finance 8788 finance
 bash scripts/up-instance.sh finance
 ```
 

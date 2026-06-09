@@ -22,6 +22,7 @@ scripts/
   configure-insecure-registry.sh
   build-push-local-registry.sh
   doctor-local-registry.sh
+  build-image.sh
 registry.env.example
 local-registry.env.example
 expert-templates/
@@ -80,10 +81,37 @@ instances/writer/data/hermes/
 cat instances/writer/.env | grep HERMES_WEBUI_PASSWORD
 ```
 
-## 5. 构建镜像
+## 5. 构建镜像（全实例只需一次）
+
+所有 instance 共用同一镜像 `hermes-agent-webui:self-evolution`。**只需构建一次**，后续创建多个 instance 时直接 `up-instance` 即可，无需重复 `docker compose build`。
 
 ```bash
-docker compose --env-file instances/writer/.env -p hermes-writer build
+# 推荐：统一构建入口
+bash scripts/build-image.sh
+```
+
+或借用某个 instance 的构建参数：
+
+```bash
+bash scripts/build-image.sh writer
+```
+
+等价于：
+
+```bash
+docker compose --env-file instances/writer/.env -p hermes-build build
+```
+
+**apt 说明**：当前 `Dockerfile` 从 Git 源码构建 WebUI（非预构建 ghcr 镜像），首次构建会在镜像层内执行 2 次 `apt-get update`（Stage 1 装 git、Stage 2 装全部系统依赖）。已合并为单次安装，不再 `apt-get upgrade`，且 Stage 3 不再重复 apt。此过程**不影响 Ubuntu 宿主机**。
+
+多实例流程：
+
+```bash
+bash scripts/build-image.sh                    # ① 只 build 一次
+bash scripts/create-instance.sh writer 9601 writer
+bash scripts/up-instance.sh writer             # ② 复用镜像，不 rebuild
+bash scripts/create-instance.sh finance 9602 finance
+bash scripts/up-instance.sh finance            # ③ 复用同一镜像
 ```
 
 如果公网不可用，建议先编辑：
