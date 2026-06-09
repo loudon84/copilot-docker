@@ -23,6 +23,8 @@ scripts/
   build-push-local-registry.sh
   doctor-local-registry.sh
   build-image.sh
+  patch-config-runtime.sh
+  import-legacy-config.sh
 registry.env.example
 local-registry.env.example
 expert-templates/
@@ -79,6 +81,43 @@ instances/writer/data/hermes/
 
 ```bash
 cat instances/writer/.env | grep HERMES_WEBUI_PASSWORD
+```
+
+### 4.1 config.yaml runtime 段（memory / gbrain / MCP）
+
+新实例通过 `inject-expert.sh` 会自动写入以下 runtime 配置（保留完整 model/providers 时不覆盖）：
+
+```yaml
+memory:
+  provider: hindsight
+  mode: local_external
+  api_url: http://hindsight.superic.com:8888
+  bank_id: hermes-<profile>
+
+mcp_servers:
+  obsidian_vault: ...
+  gbrain: ...
+
+auxiliary:
+  curator: ...
+
+security:
+  website_blocklist: ...
+
+terminal:
+  backend: docker
+```
+
+从旧版完整 config 迁移（如 `instance/config.yaml`）：
+
+```bash
+bash scripts/import-legacy-config.sh <profile> instance/config.yaml
+```
+
+已有 instance 仅补 runtime 段：
+
+```bash
+bash scripts/patch-config-runtime.sh <profile>
 ```
 
 ## 5. 构建镜像（全实例只需一次）

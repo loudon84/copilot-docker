@@ -56,6 +56,7 @@ else
 fi
 
 /app/venv/bin/python - <<'PY'
+import os
 from pathlib import Path
 try:
     import yaml
@@ -68,6 +69,17 @@ if config_path.exists():
     loaded = yaml.safe_load(config_path.read_text(encoding='utf-8'))
     if isinstance(loaded, dict):
         data = loaded
+
+profile = os.environ.get('HERMES_PROFILE', 'default')
+hindsight_api = os.environ.get('HINDSIGHT_API_URL', 'http://hindsight.superic.com:8888')
+hindsight_bank = os.environ.get('HINDSIGHT_BANK_ID', f'hermes-{profile}')
+
+data['memory'] = {
+    'provider': 'hindsight',
+    'mode': 'local_external',
+    'api_url': hindsight_api,
+    'bank_id': hindsight_bank,
+}
 
 mcp = data.setdefault('mcp_servers', {})
 mcp.setdefault('obsidian_vault', {
@@ -98,8 +110,13 @@ security.setdefault('website_blocklist', {
     'domains': ['169.254.169.254']
 })
 
+terminal = data.setdefault('terminal', {})
+terminal['backend'] = 'docker'
+terminal.setdefault('docker_forward_env', [])
+terminal.setdefault('env_passthrough', [])
+
 config_path.write_text(yaml.safe_dump(data, allow_unicode=True, sort_keys=False), encoding='utf-8')
-print('OK: config.yaml updated for obsidian_vault MCP, gbrain MCP, curator and security defaults')
+print('OK: config.yaml updated for memory, obsidian_vault MCP, gbrain MCP, curator, security and terminal')
 PY
 
 chown -R "${WANTED_UID:-1000}:${WANTED_GID:-1000}" /data/hermes || true

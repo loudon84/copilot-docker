@@ -88,8 +88,16 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 ARG HERMES_AGENT_REPO=http://git.superic.com/aiplatform/hermes-agent.git
 ARG HERMES_AGENT_REF=master
+#RUN git clone --depth=1 --branch "${HERMES_AGENT_REF}" "${HERMES_AGENT_REPO}" /opt/hermes-agent \
+#  && chmod -R a+rX /opt/hermes-agent
+
 RUN git clone --depth=1 --branch "${HERMES_AGENT_REF}" "${HERMES_AGENT_REPO}" /opt/hermes-agent \
-  && chmod -R a+rX /opt/hermes-agent
+  && mkdir -p /home/hermeswebui/.hermes \
+  && ln -sfn /opt/hermes-agent /home/hermeswebui/.hermes/hermes-agent \
+  && ln -sfn /opt/hermes-agent /opt/hermes \
+  && chmod -R a+rX /opt/hermes-agent \
+  && chown -R hermeswebui:hermeswebui /home/hermeswebui/.hermes \
+  && chown -R hermeswebui:hermeswebui /opt/hermes-agent
 
 # Install hermes-agent into the same Python venv used by hermes-webui.
 # WebUI uses /app/venv/bin/python; adding /opt/hermes-agent to sys.path is not enough
@@ -138,7 +146,10 @@ ENV GBRAIN_HOME=/data/hermes/gbrain
 ENV GBRAIN_VAULT=/data/hermes/obsidian-vault
 
 RUN mkdir -p /data/hermes /workspace /uv_cache /app \
-  && chown -R hermeswebui:hermeswebui /data /workspace /uv_cache /app || true
+  && touch /app/venv/.deps_installed \
+  && chown -R hermeswebui:hermeswebui \
+      /data /workspace /uv_cache /app /app/venv /home/hermeswebui/.hermes /opt/hermes-agent \
+  && chmod -R u+rwX,g+rwX /data /workspace /uv_cache /app /app/venv /home/hermeswebui/.hermes
 
 EXPOSE 8787
 
