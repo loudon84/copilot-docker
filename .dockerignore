@@ -1,0 +1,30 @@
+.git
+.gitignore
+
+# runtime instances must never enter Docker build context
+instances/
+asset-bundles/
+backups/
+logs/
+tmp/
+
+# Python / node cache
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+node_modules/
+
+# editor / system
+.vscode/
+.idea/
+.DS_Store
+
+# archives / logs
+*.tgz
+*.tar
+*.tar.gz
+*.zip
+*.log
