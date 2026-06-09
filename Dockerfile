@@ -32,7 +32,6 @@ RUN if [ "A${BUILD_APT_PROXY:-}" != "A" ]; then \
 RUN apt-get update -y --fix-missing --no-install-recommends \
   && apt-get install -y --no-install-recommends \
     apt-utils locales ca-certificates sudo curl rsync openssh-client \
-  && apt-get upgrade -y \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
