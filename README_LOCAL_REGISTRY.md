@@ -93,7 +93,7 @@ bash scripts/build-push-local-registry.sh
 bash scripts/build-push-local-registry.sh --dry-run
 
 # 指定版本号
-bash scripts/build-push-local-registry.sh --tag v2026.3.13
+bash scripts/build-push-local-registry.sh --tag v2026.6.1
 
 # 仅本地构建不推送
 bash scripts/build-push-local-registry.sh --no-push
@@ -110,7 +110,7 @@ bash scripts/doctor-local-registry.sh
 ```text
 [pass] registry container running
 [pass] http://192.168.102.247:9900/v2/_catalog reachable
-[pass] hermes-webui-expert:v2026.3.13 exists
+[pass] hermes-webui-expert:v2026.6.1 exists
 [pass] docker insecure registry configured
 [pass] docker pull succeeded
 ```
@@ -142,12 +142,12 @@ bash scripts/stop-local-registry.sh --remove-data
 |------|----------|
 | 组织设置 → 镜像仓库 → Hermes 专家服务 | `192.168.102.247:9900/hermes-webui-expert` |
 | 用户名 / 密码 | **留空**（本地 registry 无需认证） |
-| 组织设置 → 引擎版本 → Hermes 专家服务 → 发布新版本 | `v2026.3.13`（与 `IMAGE_TAG` 一致） |
+| 组织设置 → 引擎版本 → Hermes 专家服务 → 发布新版本 | `v2026.6.1`（与 `IMAGE_TAG` 一致） |
 
 部署时 nodeskclaw 将拉取：
 
 ```text
-192.168.102.247:9900/hermes-webui-expert:v2026.3.13
+192.168.102.247:9900/hermes-webui-expert:v2026.6.1
 ```
 
 ## 5. 常见错误
@@ -181,7 +181,24 @@ curl http://192.168.102.247:9900/v2/_catalog
 
 **处理**：确认 `IMAGE_REPO=192.168.102.247:9900/hermes-webui-expert`，本地测试模式**不需要** `docker login`。
 
-### 5.4 buildx push 失败
+### 5.4 `docker buildx 不可用`
+
+**原因**：主机只安装了 `docker-ce`，未安装 `docker-buildx-plugin`。
+
+**处理**（二选一）：
+
+```bash
+# 推荐：安装 buildx 插件
+sudo apt-get update
+sudo apt-get install -y docker-buildx-plugin
+
+# 或一键重装 Docker（含 buildx + compose）
+sudo bash scripts/install-docker-ubuntu24.sh
+```
+
+未安装 buildx 时，`build-push-local-registry.sh` 会自动回退到 `docker build`（仅适用于本机 amd64 构建 `linux/amd64`）。
+
+### 5.5 buildx push 失败
 
 **原因**：`buildx` 的 `docker-container` builder 可能无法继承宿主机 insecure registry 配置。
 

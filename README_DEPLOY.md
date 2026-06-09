@@ -334,7 +334,7 @@ docker buildx build \
 bash scripts/build-push-registry.sh --dry-run
 
 # 指定版本号
-bash scripts/build-push-registry.sh --login --tag v2026.3.13
+bash scripts/build-push-registry.sh --login --tag v2026.6.1
 
 # 仅本地构建不推送（调试用）
 bash scripts/build-push-registry.sh --no-push

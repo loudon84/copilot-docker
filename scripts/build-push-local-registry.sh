@@ -85,9 +85,29 @@ if ! command -v docker >/dev/null 2>&1; then
   exit 1
 fi
 
-if ! docker buildx version >/dev/null 2>&1; then
-  echo "ERROR: docker buildx 不可用" >&2
-  exit 1
+BUILD_ARGS=(
+  --build-arg "HERMES_WEBUI_REPO=${HERMES_WEBUI_REPO}"
+  --build-arg "HERMES_WEBUI_REF=${HERMES_WEBUI_REF}"
+  --build-arg "HERMES_AGENT_REPO=${HERMES_AGENT_REPO}"
+  --build-arg "HERMES_AGENT_REF=${HERMES_AGENT_REF}"
+  --build-arg "HERMES_VERSION=${IMAGE_TAG}"
+  --build-arg "INSTALL_GBRAIN=${INSTALL_GBRAIN}"
+  --build-arg "GBRAIN_REPO=${GBRAIN_REPO}"
+  --build-arg "INSTALL_FILESYSTEM_MCP=${INSTALL_FILESYSTEM_MCP}"
+  --build-arg "INSTALL_CLAWSEC=${INSTALL_CLAWSEC}"
+  --build-arg "CLAWSEC_REPO=${CLAWSEC_REPO}"
+)
+
+USE_BUILDX=0
+if docker buildx version >/dev/null 2>&1; then
+  USE_BUILDX=1
+else
+  echo "[warn] docker buildx 不可用，回退到 docker build" >&2
+  echo "       如需跨平台构建，请安装: sudo apt-get install -y docker-buildx-plugin" >&2
+  if [ "$BUILD_PLATFORM" != "linux/amd64" ] && [ "$(uname -m)" != "x86_64" ]; then
+    echo "ERROR: 当前平台 $(uname -m) 且 BUILD_PLATFORM=${BUILD_PLATFORM}，必须安装 docker-buildx-plugin" >&2
+    exit 1
+  fi
 fi
 
 echo "[check] registry 可访问性: ${REGISTRY_URL}/v2/_catalog"
@@ -99,37 +119,37 @@ if [ "$DRY_RUN" = "0" ]; then
   echo "[pass] registry 可达"
 fi
 
-BUILDER_NAME="${BUILDX_BUILDER:-hermes-local-registry-builder}"
-if ! docker buildx inspect "$BUILDER_NAME" >/dev/null 2>&1; then
-  echo "[buildx] create builder: $BUILDER_NAME"
-  if [ "$DRY_RUN" = "0" ]; then
-    docker buildx create --name "$BUILDER_NAME" --use
+if [ "$USE_BUILDX" = "1" ]; then
+  BUILDER_NAME="${BUILDX_BUILDER:-hermes-local-registry-builder}"
+  if ! docker buildx inspect "$BUILDER_NAME" >/dev/null 2>&1; then
+    echo "[buildx] create builder: $BUILDER_NAME"
+    if [ "$DRY_RUN" = "0" ]; then
+      docker buildx create --name "$BUILDER_NAME" --use
+    fi
+  else
+    if [ "$DRY_RUN" = "0" ]; then
+      docker buildx use "$BUILDER_NAME"
+    fi
   fi
+
+  BUILD_CMD=(
+    docker buildx build
+    --platform "$BUILD_PLATFORM"
+    -t "$FULL_IMAGE"
+    "${BUILD_ARGS[@]}"
+    --load
+    .
+  )
+  echo "[build] ${FULL_IMAGE} (buildx --load)"
 else
-  if [ "$DRY_RUN" = "0" ]; then
-    docker buildx use "$BUILDER_NAME"
-  fi
+  BUILD_CMD=(
+    docker build
+    -t "$FULL_IMAGE"
+    "${BUILD_ARGS[@]}"
+    .
+  )
+  echo "[build] ${FULL_IMAGE} (docker build)"
 fi
-
-BUILD_CMD=(
-  docker buildx build
-  --platform "$BUILD_PLATFORM"
-  -t "$FULL_IMAGE"
-  --build-arg "HERMES_WEBUI_REPO=${HERMES_WEBUI_REPO}"
-  --build-arg "HERMES_WEBUI_REF=${HERMES_WEBUI_REF}"
-  --build-arg "HERMES_AGENT_REPO=${HERMES_AGENT_REPO}"
-  --build-arg "HERMES_AGENT_REF=${HERMES_AGENT_REF}"
-  --build-arg "HERMES_VERSION=${IMAGE_TAG}"
-  --build-arg "INSTALL_GBRAIN=${INSTALL_GBRAIN}"
-  --build-arg "GBRAIN_REPO=${GBRAIN_REPO}"
-  --build-arg "INSTALL_FILESYSTEM_MCP=${INSTALL_FILESYSTEM_MCP}"
-  --build-arg "INSTALL_CLAWSEC=${INSTALL_CLAWSEC}"
-  --build-arg "CLAWSEC_REPO=${CLAWSEC_REPO}"
-  --load
-  .
-)
-
-echo "[build] ${FULL_IMAGE} (--load)"
 printf '  '; printf '%q ' "${BUILD_CMD[@]}"; echo
 
 if [ "$DRY_RUN" = "1" ]; then
