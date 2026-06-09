@@ -13,3 +13,4 @@ $RECYCLE.BIN/
 
 # 本地镜像仓库凭据/配置（勿提交）
 registry.env
+local-registry.env

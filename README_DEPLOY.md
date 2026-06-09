@@ -17,7 +17,13 @@ scripts/
   install-self-evolution.sh
   bootstrap-self-evolution-stack.sh
   build-push-registry.sh
+  start-local-registry.sh
+  stop-local-registry.sh
+  configure-insecure-registry.sh
+  build-push-local-registry.sh
+  doctor-local-registry.sh
 registry.env.example
+local-registry.env.example
 expert-templates/
   base/
   default/
@@ -354,3 +360,35 @@ bash scripts/build-push-registry.sh --no-push
 - 已安装 `docker` + `docker buildx`（见 `scripts/install-docker-ubuntu24.sh`）
 - 构建期可访问 `git.superic.com` 上的 hermes-webui / hermes-agent
 - 若启用 GBrain，构建机需能访问 `GBRAIN_REPO`（或改为内网 mirror）
+
+## 15. 本地 Registry 测试模式
+
+在尚未开通火山、阿里云、Harbor 等正式镜像仓库时，可使用本地 Docker Registry 验证完整链路。
+
+### 15.1 端口说明
+
+`registry:2` 默认在**容器内**监听 **5000** 端口。若宿主机使用 **9900**，启动时必须使用 `-p 9900:5000` 映射。
+
+### 15.2 快速流程
+
+```bash
+cp local-registry.env.example local-registry.env
+# 编辑 LOCAL_REGISTRY_HOST、IMAGE_REPO、IMAGE_TAG
+
+bash scripts/start-local-registry.sh
+sudo bash scripts/configure-insecure-registry.sh
+bash scripts/build-push-local-registry.sh
+bash scripts/doctor-local-registry.sh
+```
+
+### 15.3 与远程推送的区别
+
+| 项目 | 远程仓库 | 本地 Registry |
+|------|----------|---------------|
+| 配置文件 | `registry.env` | `local-registry.env` |
+| 构建脚本 | `build-push-registry.sh` | `build-push-local-registry.sh` |
+| 认证 | 需要 `docker login` | 无需认证 |
+| 推送方式 | `buildx --push` | `--load` + `docker push` |
+| HTTP 支持 | HTTPS | 需配置 `insecure-registries` |
+
+完整文档见 [README_LOCAL_REGISTRY.md](README_LOCAL_REGISTRY.md)。

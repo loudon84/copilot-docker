@@ -57,6 +57,20 @@ bash scripts/build-push-registry.sh --login
 
 详见 [README_DEPLOY.md §14](README_DEPLOY.md#14-一键构建推送到火山引擎nodeskclaw)。
 
+## 本地 Docker Registry 测试
+
+如果暂时没有火山/阿里云/Harbor 镜像仓库，可使用本地 Docker Registry 完成构建、推送与 nodeskclaw 联调。
+
+```bash
+cp local-registry.env.example local-registry.env
+bash scripts/start-local-registry.sh
+sudo bash scripts/configure-insecure-registry.sh
+bash scripts/build-push-local-registry.sh
+bash scripts/doctor-local-registry.sh
+```
+
+详见 [README_LOCAL_REGISTRY.md](README_LOCAL_REGISTRY.md)。
+
 ## 目录
 
 ```text
