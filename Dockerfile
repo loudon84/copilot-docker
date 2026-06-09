@@ -45,12 +45,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /apptoo
 
 RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers \
-  && groupadd -g 1024 hermeswebui \
-  && groupadd -g 1025 hermeswebuitoo \
-  && useradd -u 1024 -d /home/hermeswebui -g hermeswebui -s /bin/bash -m hermeswebui \
+  && groupadd -g 1000 hermeswebui \
+  && groupadd -g 1001 hermeswebuitoo \
+  && useradd -u 1000 -d /home/hermeswebui -g hermeswebui -s /bin/bash -m hermeswebui \
   && usermod -G users hermeswebui \
   && adduser hermeswebui sudo \
-  && useradd -u 1025 -d /home/hermeswebuitoo -g hermeswebuitoo -s /bin/bash -m hermeswebuitoo \
+  && useradd -u 1001 -d /home/hermeswebuitoo -g hermeswebuitoo -s /bin/bash -m hermeswebuitoo \
   && usermod -G users hermeswebuitoo \
   && adduser hermeswebuitoo sudo \
   && chown -R hermeswebuitoo:hermeswebuitoo /apptoo

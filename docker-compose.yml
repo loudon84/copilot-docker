@@ -6,7 +6,7 @@
 
 services:
   hermes-agent-webui:
-    user: "1024:1024"
+    user: "1000:1000"
     build:
       context: .
       dockerfile: Dockerfile
@@ -21,14 +21,14 @@ services:
         INSTALL_FILESYSTEM_MCP: ${INSTALL_FILESYSTEM_MCP:-1}
         INSTALL_CLAWSEC: ${INSTALL_CLAWSEC:-0}
         CLAWSEC_REPO: ${CLAWSEC_REPO:-https://github.com/prompt-security/clawsec.git}
-    image: ${LOCAL_IMAGE_NAME:-hermes-agent-webui:self-evolution}
+    image: ${LOCAL_IMAGE_NAME:-hermes-agent-webui:lastest}
     container_name: hermes-${HERMES_PROFILE:-default}
     restart: unless-stopped
     ports:
       - "${HERMES_WEBUI_BIND:-0.0.0.0}:${HERMES_WEBUI_PORT:-8787}:8787"
     environment:
-      WANTED_UID: ${UID:-1024}
-      WANTED_GID: ${GID:-1024}
+      WANTED_UID: ${UID:-1000}
+      WANTED_GID: ${GID:-1000}
       HERMES_PROFILE: ${HERMES_PROFILE:-default}
       HERMES_EXPERT: ${HERMES_EXPERT:-base}
       HERMES_HOME: /data/hermes
