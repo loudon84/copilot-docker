@@ -21,6 +21,10 @@ services:
         INSTALL_FILESYSTEM_MCP: ${INSTALL_FILESYSTEM_MCP:-1}
         INSTALL_CLAWSEC: ${INSTALL_CLAWSEC:-0}
         CLAWSEC_REPO: ${CLAWSEC_REPO:-http://git.superic.com/aiplatform/clawsec.git}
+        USE_CN_MIRRORS: ${USE_CN_MIRRORS:-1}
+        APT_MIRROR: ${APT_MIRROR:-https://mirrors.aliyun.com/debian}
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://mirrors.aliyun.com/pypi/simple/}
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmmirror.com}
     image: ${LOCAL_IMAGE_NAME:-hermes-agent-webui:lastest}
     container_name: hermes-${HERMES_PROFILE:-default}
     restart: unless-stopped

@@ -54,7 +54,7 @@ HERMES_WEBUI_REF=master
 HERMES_AGENT_REPO=http://git.superic.com/aiplatform/hermes-agent.git
 HERMES_AGENT_REF=master
 HERMES_VERSION=git-build
-LOCAL_IMAGE_NAME=hermes-agent-webui:self-evolution
+LOCAL_IMAGE_NAME=hermes-agent-webui:lastest
 HERMES_WEBUI_BIND=0.0.0.0
 HERMES_WEBUI_PORT=$PORT
 HERMES_WEBUI_PASSWORD=$PASS
@@ -63,13 +63,19 @@ HERMES_EXPERT=$EXPERT
 HINDSIGHT_API_URL=http://hindsight.superic.com:8888
 HINDSIGHT_BANK_ID=hermes-$PROFILE
 INSTALL_GBRAIN=1
-GBRAIN_REPO=github:garrytan/gbrain
+GBRAIN_REPO=http://git.superic.com/aiplatform/gbrain.git
 INSTALL_FILESYSTEM_MCP=1
 INSTALL_CLAWSEC=0
-CLAWSEC_REPO=https://github.com/prompt-security/clawsec.git
+CLAWSEC_REPO=http://git.superic.com/aiplatform/clawsec.git
 GBRAIN_ENABLED=1
 HERMES_CURATOR_ENABLED=1
 HERMES_SELF_EVOLUTION_ENABLED=0
+
+USE_CN_MIRRORS=1
+APT_MIRROR=https://mirrors.aliyun.com/debian
+PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/
+NPM_REGISTRY=https://registry.npmmirror.com
+
 EOF_ENV
   chmod 600 "$INSTANCE_DIR/.env"
 fi

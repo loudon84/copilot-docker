@@ -7,6 +7,17 @@ ARG HERMES_WEBUI_REF=master
 FROM python:3.12-slim AS webui-clone
 ARG HERMES_WEBUI_REPO
 ARG HERMES_WEBUI_REF
+
+ARG USE_CN_MIRRORS=1
+ARG APT_MIRROR=https://mirrors.aliyun.com/debian
+ARG PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/
+ARG NPM_REGISTRY=https://registry.npmmirror.com
+
+ENV PIP_INDEX_URL=${PIP_INDEX_URL}
+ENV PIP_TRUSTED_HOST=mirrors.aliyun.com
+ENV NPM_CONFIG_REGISTRY=${NPM_REGISTRY}
+ENV UV_DEFAULT_INDEX=${PIP_INDEX_URL}
+
 RUN apt-get update \
   && apt-get install -y --no-install-recommends git ca-certificates \
   && rm -rf /var/lib/apt/lists/* \

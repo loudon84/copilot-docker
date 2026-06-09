@@ -122,7 +122,7 @@ bash scripts/patch-config-runtime.sh <profile>
 
 ## 5. 构建镜像（全实例只需一次）
 
-所有 instance 共用同一镜像 `hermes-agent-webui:self-evolution`。**只需构建一次**，后续创建多个 instance 时直接 `up-instance` 即可，无需重复 `docker compose build`。
+所有 instance 共用同一镜像 `hermes-agent-webui:lastest`。**只需构建一次**，后续创建多个 instance 时直接 `up-instance` 即可，无需重复 `docker compose build`。
 
 ```bash
 # 推荐：统一构建入口
