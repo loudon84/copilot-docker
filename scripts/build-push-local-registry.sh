@@ -66,10 +66,10 @@ HERMES_WEBUI_REF="${HERMES_WEBUI_REF:-master}"
 HERMES_AGENT_REPO="${HERMES_AGENT_REPO:-http://git.superic.com/aiplatform/hermes-agent.git}"
 HERMES_AGENT_REF="${HERMES_AGENT_REF:-master}"
 INSTALL_GBRAIN="${INSTALL_GBRAIN:-1}"
-GBRAIN_REPO="${GBRAIN_REPO:-github:garrytan/gbrain}"
+GBRAIN_REPO="${GBRAIN_REPO:-http://git.superic.com/aiplatform/gbrain.git}"
 INSTALL_FILESYSTEM_MCP="${INSTALL_FILESYSTEM_MCP:-1}"
 INSTALL_CLAWSEC="${INSTALL_CLAWSEC:-0}"
-CLAWSEC_REPO="${CLAWSEC_REPO:-https://github.com/prompt-security/clawsec.git}"
+CLAWSEC_REPO="${CLAWSEC_REPO:-http://git.superic.com/aiplatform/clawsec.git}"
 BUILD_PLATFORM="${BUILD_PLATFORM:-linux/amd64}"
 
 if [ -z "$IMAGE_REPO" ]; then

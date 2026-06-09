@@ -25,7 +25,7 @@ services:
         APT_MIRROR: ${APT_MIRROR:-https://mirrors.aliyun.com/debian}
         PIP_INDEX_URL: ${PIP_INDEX_URL:-https://mirrors.aliyun.com/pypi/simple/}
         NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmmirror.com}
-    image: ${LOCAL_IMAGE_NAME:-hermes-agent-webui:lastest}
+    image: ${LOCAL_IMAGE_NAME:-hermes-agent-webui:latest}
     container_name: hermes-${HERMES_PROFILE:-default}
     restart: unless-stopped
     ports:

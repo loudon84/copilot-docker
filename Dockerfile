@@ -124,7 +124,7 @@ PY
 
 # Optional GBrain and MCP runtime tooling. Use internal mirrors in production.
 ARG INSTALL_GBRAIN=1
-ARG GBRAIN_REPO=github:garrytan/gbrain
+ARG GBRAIN_REPO=http://git.superic.com/aiplatform/gbrain.git
 RUN if [ "${INSTALL_GBRAIN}" = "1" ]; then \
       (curl -fsSL https://bun.sh/install | bash -s -- bun-v1.2.15 \
         && ln -sf /root/.bun/bin/bun /usr/local/bin/bun \
@@ -141,7 +141,7 @@ RUN if [ "${INSTALL_FILESYSTEM_MCP}" = "1" ]; then \
     fi
 
 ARG INSTALL_CLAWSEC=0
-ARG CLAWSEC_REPO=https://github.com/prompt-security/clawsec.git
+ARG CLAWSEC_REPO=http://git.superic.com/aiplatform/clawsec.git
 RUN if [ "${INSTALL_CLAWSEC}" = "1" ]; then \
       git clone --depth=1 "${CLAWSEC_REPO}" /opt/clawsec \
       || echo "WARN: clawsec clone failed; install-security-skills.sh will install fallback local security skills."; \

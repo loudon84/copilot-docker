@@ -8,7 +8,7 @@ ENV_FILE="$BASE_DIR/instances/$PROFILE/.env"
 cd "$BASE_DIR"
 
 LOCAL_IMAGE=$(grep '^LOCAL_IMAGE_NAME=' "$ENV_FILE" | cut -d= -f2-)
-LOCAL_IMAGE="${LOCAL_IMAGE:-hermes-agent-webui:lastest}"
+LOCAL_IMAGE="${LOCAL_IMAGE:-hermes-agent-webui:latest}"
 
 if [ "$BUILD_FLAG" = "--build" ]; then
   echo "[build] 强制重建镜像: $LOCAL_IMAGE"

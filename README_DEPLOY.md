@@ -52,7 +52,7 @@ HERMES_WEBUI_REPO=http://git.superic.com/aiplatform/hermes-webui.git
 HERMES_AGENT_REPO=http://git.superic.com/aiplatform/hermes-agent.git
 ```
 
-如需在构建阶段安装 GBrain，需要能访问 `github:garrytan/gbrain`，或者在实例 `.env` 中把 `GBRAIN_REPO` 改成内网 mirror。
+如需在构建阶段安装 GBrain，需要能访问 `http://git.superic.com/aiplatform/gbrain.git`，或者在实例 `.env` 中把 `GBRAIN_REPO` 改成内网 mirror。
 
 ## 3. 解压与授权
 
@@ -122,7 +122,7 @@ bash scripts/patch-config-runtime.sh <profile>
 
 ## 5. 构建镜像（全实例只需一次）
 
-所有 instance 共用同一镜像 `hermes-agent-webui:lastest`。**只需构建一次**，后续创建多个 instance 时直接 `up-instance` 即可，无需重复 `docker compose build`。
+所有 instance 共用同一镜像 `hermes-agent-webui:latest`。**只需构建一次**，后续创建多个 instance 时直接 `up-instance` 即可，无需重复 `docker compose build`。
 
 ```bash
 # 推荐：统一构建入口
@@ -162,8 +162,8 @@ nano instances/writer/.env
 把：
 
 ```text
-GBRAIN_REPO=github:garrytan/gbrain
-CLAWSEC_REPO=https://github.com/prompt-security/clawsec.git
+GBRAIN_REPO=http://git.superic.com/aiplatform/gbrain.git
+CLAWSEC_REPO=http://git.superic.com/aiplatform/clawsec.git
 ```
 
 改成内网 Git mirror。

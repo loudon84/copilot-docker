@@ -7,7 +7,7 @@
 #   bash scripts/build-image.sh --no-cache      # 强制无缓存重建
 #
 # 说明：
-#   所有 instance 的 LOCAL_IMAGE_NAME 默认为 hermes-agent-webui:lastest。
+#   所有 instance 的 LOCAL_IMAGE_NAME 默认为 hermes-agent-webui:latest。
 #   首次 build 后，后续 create-instance + up-instance 无需再 docker compose build。
 
 set -euo pipefail
@@ -44,7 +44,7 @@ else
 fi
 
 LOCAL_IMAGE=$(grep '^LOCAL_IMAGE_NAME=' "$ENV_FILE" | cut -d= -f2-)
-LOCAL_IMAGE="${LOCAL_IMAGE:-hermes-agent-webui:lastest}"
+LOCAL_IMAGE="${LOCAL_IMAGE:-hermes-agent-webui:latest}"
 
 BUILD_ARGS=()
 if [ "$NO_CACHE" = "1" ]; then
