@@ -1,21 +1,65 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PROFILE="${1:?usage: export-assets.sh <source_profile> <bundle_name>}"
-BUNDLE="${2:?usage: export-assets.sh <source_profile> <bundle_name>}"
+PROFILE="${1:?usage: export-assets.sh <source_profile> <bundle_name> [--migrate-agent-tools]}"
+BUNDLE="${2:?usage: export-assets.sh <source_profile> <bundle_name> [--migrate-agent-tools]}"
+MIGRATE_AGENT_TOOLS=0
+
+shift 2 || true
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --migrate-agent-tools) MIGRATE_AGENT_TOOLS=1 ;;
+    *)
+      echo "ERROR: unknown argument: $1" >&2
+      exit 1
+      ;;
+  esac
+  shift
+done
 
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONTAINER="hermes-$PROFILE"
 OUT_DIR="$BASE_DIR/asset-bundles/$BUNDLE"
 TMP_DIR="/tmp/hermes-asset-export-$BUNDLE"
+INCLUDE_FILE="$BASE_DIR/asset-bundles/$BUNDLE/agent-tools.include"
+INCLUDE_TMP=""
 
 docker inspect "$CONTAINER" >/dev/null 2>&1 || {
   echo "ERROR: container not found: $CONTAINER"
   exit 1
 }
 
+if [ -f "$INCLUDE_FILE" ]; then
+  INCLUDE_TMP="$(mktemp)"
+  cp "$INCLUDE_FILE" "$INCLUDE_TMP"
+fi
+
 rm -rf "$OUT_DIR"
 mkdir -p "$OUT_DIR"
+
+if [ "$MIGRATE_AGENT_TOOLS" = "1" ]; then
+  if [ -n "$INCLUDE_TMP" ] && [ -f "$INCLUDE_TMP" ]; then
+    docker cp "$INCLUDE_TMP" "$CONTAINER:/tmp/agent-tools.include"
+    docker exec "$CONTAINER" bash -lc '
+set -e
+mkdir -p /data/hermes/tools
+while IFS= read -r item || [ -n "$item" ]; do
+  case "$item" in
+    ""|\#*) continue ;;
+  esac
+  if [ -e "/opt/hermes-agent/tools/$item" ]; then
+    cp -a "/opt/hermes-agent/tools/$item" "/data/hermes/tools/" || true
+  else
+    echo "WARN: agent tool not found: $item"
+  fi
+done < /tmp/agent-tools.include
+'
+  else
+    echo "WARN: --migrate-agent-tools set but $INCLUDE_FILE not found; skipping migration"
+  fi
+fi
+
+[ -n "$INCLUDE_TMP" ] && rm -f "$INCLUDE_TMP"
 
 docker exec "$CONTAINER" bash -lc "
 set -e
@@ -24,36 +68,22 @@ mkdir -p '$TMP_DIR'
 
 for d in skills tools plugins mcp policies skill-bundles gbrain; do
   if [ -d /data/hermes/\$d ]; then
-    mkdir -p '$TMP_DIR'
     cp -a /data/hermes/\$d '$TMP_DIR/' || true
   fi
 done
-
-if [ -d /home/hermeswebui/.hermes/tools ]; then
-  mkdir -p '$TMP_DIR/tools'
-  cp -a /home/hermeswebui/.hermes/tools/. '$TMP_DIR/tools/' || true
-fi
-
-if [ -d /home/hermeswebui/.hermes/plugins ]; then
-  mkdir -p '$TMP_DIR/plugins'
-  cp -a /home/hermeswebui/.hermes/plugins/. '$TMP_DIR/plugins/' || true
-fi
-
-if [ -d /opt/hermes-agent/tools ]; then
-  mkdir -p '$TMP_DIR/tools'
-  cp -a /opt/hermes-agent/tools/. '$TMP_DIR/tools/' || true
-fi
-
-if [ -d /opt/hermes-agent/plugins ]; then
-  mkdir -p '$TMP_DIR/plugins'
-  cp -a /opt/hermes-agent/plugins/. '$TMP_DIR/plugins/' || true
-fi
 
 cd '$TMP_DIR'
 tar czf /tmp/data-hermes-assets.tgz .
 "
 
 docker cp "$CONTAINER:/tmp/data-hermes-assets.tgz" "$OUT_DIR/data-hermes-assets.tgz"
+
+if tar tzf "$OUT_DIR/data-hermes-assets.tgz" \
+  | grep -E '(^|/)tools/tools($|/)|(^|/)plugins/plugins($|/)' >/dev/null 2>&1; then
+  echo "ERROR: invalid nested tools/plugins path detected in bundle"
+  rm -f "$OUT_DIR/data-hermes-assets.tgz"
+  exit 1
+fi
 
 docker exec "$CONTAINER" bash -lc "/app/venv/bin/python -m pip freeze" > "$OUT_DIR/pip-freeze.txt" || true
 

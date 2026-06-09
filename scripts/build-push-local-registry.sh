@@ -19,6 +19,9 @@ set -euo pipefail
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$BASE_DIR"
 
+test -f "$BASE_DIR/.dockerignore" || { echo "ERROR: .dockerignore missing" >&2; exit 1; }
+grep -q '^instances/$' "$BASE_DIR/.dockerignore" || { echo "ERROR: .dockerignore must exclude instances/" >&2; exit 1; }
+
 DRY_RUN=0
 NO_PUSH=0
 TAG_OVERRIDE=""
@@ -71,6 +74,10 @@ INSTALL_FILESYSTEM_MCP="${INSTALL_FILESYSTEM_MCP:-1}"
 INSTALL_CLAWSEC="${INSTALL_CLAWSEC:-0}"
 CLAWSEC_REPO="${CLAWSEC_REPO:-http://git.superic.com/aiplatform/clawsec.git}"
 BUILD_PLATFORM="${BUILD_PLATFORM:-linux/amd64}"
+USE_CN_MIRRORS="${USE_CN_MIRRORS:-1}"
+APT_MIRROR="${APT_MIRROR:-https://mirrors.aliyun.com/debian}"
+PIP_INDEX_URL="${PIP_INDEX_URL:-https://mirrors.aliyun.com/pypi/simple/}"
+NPM_REGISTRY="${NPM_REGISTRY:-https://registry.npmmirror.com}"
 
 if [ -z "$IMAGE_REPO" ]; then
   echo "ERROR: 请设置 IMAGE_REPO（local-registry.env）" >&2
@@ -96,6 +103,10 @@ BUILD_ARGS=(
   --build-arg "INSTALL_FILESYSTEM_MCP=${INSTALL_FILESYSTEM_MCP}"
   --build-arg "INSTALL_CLAWSEC=${INSTALL_CLAWSEC}"
   --build-arg "CLAWSEC_REPO=${CLAWSEC_REPO}"
+  --build-arg "USE_CN_MIRRORS=${USE_CN_MIRRORS}"
+  --build-arg "APT_MIRROR=${APT_MIRROR}"
+  --build-arg "PIP_INDEX_URL=${PIP_INDEX_URL}"
+  --build-arg "NPM_REGISTRY=${NPM_REGISTRY}"
 )
 
 USE_BUILDX=0

@@ -34,7 +34,13 @@ for d in skills tools plugins mcp policies skill-bundles gbrain; do
   fi
 done
 
+rm -f "$TARGET_DIR/tools/tools" 2>/dev/null || true
+rm -f "$TARGET_DIR/plugins/plugins" 2>/dev/null || true
+
 tar xzf "$BUNDLE_DIR/data-hermes-assets.tgz" -C "$TARGET_DIR"
+
+rm -f "$TARGET_DIR/tools/tools" 2>/dev/null || true
+rm -f "$TARGET_DIR/plugins/plugins" 2>/dev/null || true
 
 chown -R 1000:1000 \
   "$TARGET_DIR/skills" \
@@ -56,20 +62,12 @@ chmod -R u+rwX,g+rwX \
 
 if docker inspect "$CONTAINER" >/dev/null 2>&1; then
   docker exec -u root "$CONTAINER" bash -lc '
-    mkdir -p /data/hermes/tools /data/hermes/plugins /home/hermeswebui/.hermes
-
-    if [ ! -L /home/hermeswebui/.hermes/tools ]; then
-      rm -rf /home/hermeswebui/.hermes/tools
-      ln -sfn /data/hermes/tools /home/hermeswebui/.hermes/tools
-    fi
-
-    if [ ! -L /home/hermeswebui/.hermes/plugins ]; then
-      rm -rf /home/hermeswebui/.hermes/plugins
-      ln -sfn /data/hermes/plugins /home/hermeswebui/.hermes/plugins
-    fi
-
-    chown -R 1000:1000 /data/hermes /home/hermeswebui/.hermes || true
-    chmod -R u+rwX,g+rwX /data/hermes /home/hermeswebui/.hermes || true
+    test -d /data/hermes/tools || echo "WARN: /data/hermes/tools missing"
+    test -d /data/hermes/plugins || echo "WARN: /data/hermes/plugins missing"
+    mountpoint -q /home/hermeswebui/.hermes/tools || echo "WARN: ~/.hermes/tools not a mountpoint"
+    mountpoint -q /home/hermeswebui/.hermes/plugins || echo "WARN: ~/.hermes/plugins not a mountpoint"
+    chown -R 1000:1000 /data/hermes/tools /data/hermes/plugins
+    chmod -R u+rwX,g+rwX /data/hermes/tools /data/hermes/plugins
   '
 
   if [ -s "$BUNDLE_DIR/requirements.txt" ]; then

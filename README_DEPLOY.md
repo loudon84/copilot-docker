@@ -11,6 +11,8 @@ scripts/
   up-instance.sh
   down-instance.sh
   doctor-instance.sh
+  doctor-paths.sh
+  repair-existing-instances.sh
   install-blound-skills.sh
   init-brain-runtime.sh
   install-security-skills.sh
@@ -34,7 +36,30 @@ expert-templates/
   finance/
 ```
 
-## 2. 部署前置条件
+## 2. 路径规则
+
+所有 Hermes 实例资产遵循以下目录边界：
+
+- **唯一主目录**：容器内 `/data/hermes`
+- **实例目录**：宿主机 `instances/<profile>/data/hermes`
+- **兼容路径**：`/home/hermeswebui/.hermes/tools`、`/home/hermeswebui/.hermes/plugins` 仅由 `docker-compose.yml` bind mount 到 `/data/hermes/tools`、`/data/hermes/plugins`
+- **源码路径**：`/opt/hermes-agent` 只属于基础镜像，不作为实例资产分发来源
+
+禁止事项：
+
+- 禁止在容器内删除、重建或手工软链 `~/.hermes/tools`、`~/.hermes/plugins`
+- 禁止从 `/opt/hermes-agent/tools` 直接当作实例资产导出或分发
+- 禁止在 `tools/` 或 `plugins/` 下创建 `tools/tools`、`plugins/plugins` 嵌套路径
+
+诊断与修复：
+
+```bash
+bash scripts/doctor-paths.sh <profile>
+bash scripts/doctor-paths.sh <profile> --fix
+bash scripts/repair-existing-instances.sh
+```
+
+## 3. 部署前置条件
 
 服务器需要具备：
 
@@ -54,7 +79,7 @@ HERMES_AGENT_REPO=http://git.superic.com/aiplatform/hermes-agent.git
 
 如需在构建阶段安装 GBrain，需要能访问 `http://git.superic.com/aiplatform/gbrain.git`，或者在实例 `.env` 中把 `GBRAIN_REPO` 改成内网 mirror。
 
-## 3. 解压与授权
+## 4. 解压与授权
 
 ```bash
 mkdir -p /data/hermes-self-evolution

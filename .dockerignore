@@ -4,6 +4,7 @@
 # runtime instances must never enter Docker build context
 instances/
 asset-bundles/
+expert-images/
 backups/
 logs/
 tmp/

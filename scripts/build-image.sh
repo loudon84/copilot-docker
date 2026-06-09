@@ -15,6 +15,9 @@ set -euo pipefail
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$BASE_DIR"
 
+test -f "$BASE_DIR/.dockerignore" || { echo "ERROR: .dockerignore missing" >&2; exit 1; }
+grep -q '^instances/$' "$BASE_DIR/.dockerignore" || { echo "ERROR: .dockerignore must exclude instances/" >&2; exit 1; }
+
 NO_CACHE=0
 PROFILE=""
 

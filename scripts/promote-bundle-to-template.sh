@@ -19,5 +19,15 @@ cp -a "$TPL_DIR" "$BACKUP_DIR"
 
 tar xzf "$BUNDLE_DIR/data-hermes-assets.tgz" -C "$TPL_DIR"
 
+for bad in "$TPL_DIR/tools/tools" "$TPL_DIR/plugins/plugins" \
+           "$TPL_DIR/.env" "$TPL_DIR/sessions" "$TPL_DIR/logs" \
+           "$TPL_DIR/webui" "$TPL_DIR/hindsight" "$TPL_DIR/workspace" \
+           "$TPL_DIR/obsidian-vault" "$TPL_DIR/memories"; do
+  if [ -e "$bad" ]; then
+    echo "ERROR: prohibited path in template: $bad"
+    exit 1
+  fi
+done
+
 echo "OK: promoted bundle '$BUNDLE' to expert template '$EXPERT'"
 echo "Backup: $BACKUP_DIR"

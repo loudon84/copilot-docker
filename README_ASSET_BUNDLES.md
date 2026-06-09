@@ -15,6 +15,25 @@ Asset Bundle 用于在多个 Hermes Agent WebUI 实例之间复用 skills、tool
 
 ---
 
+## 路径规则
+
+Asset Bundle 只从 `/data/hermes` 导出，不从以下路径读取：
+
+- `/home/hermeswebui/.hermes/tools`
+- `/home/hermeswebui/.hermes/plugins`
+- `/opt/hermes-agent/tools`
+- `/opt/hermes-agent/plugins`
+
+宿主机导入目标固定为 `instances/<profile>/data/hermes`。`~/.hermes/tools` 与 `~/.hermes/plugins` 由 compose bind mount 提供兼容入口，导入脚本不得删除或重建这些 mountpoint。
+
+如需迁移镜像内历史工具，可先准备白名单文件 `asset-bundles/<bundle>/agent-tools.include`，再执行：
+
+```bash
+bash scripts/export-assets.sh <source_profile> <bundle_name> --migrate-agent-tools
+```
+
+导出后会自动检测 bundle 中是否存在 `tools/tools` 或 `plugins/plugins` 嵌套路径。
+
 ## 可复制内容
 
 - `skills/`
@@ -120,6 +139,7 @@ httpx
 
 ```bash
 bash scripts/list-assets.sh writer2
+bash scripts/doctor-paths.sh writer2
 ```
 
 在容器内运行验证脚本：
