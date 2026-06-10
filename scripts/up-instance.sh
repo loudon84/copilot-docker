@@ -12,14 +12,15 @@ mkdir -p \
   "$DATA_DIR/tools" \
   "$DATA_DIR/plugins" \
   "$DATA_DIR/skills" \
+  "$DATA_DIR/skills-inbox" \
   "$DATA_DIR/mcp" \
   "$DATA_DIR/policies" \
   "$DATA_DIR/skill-bundles" \
   "$DATA_DIR/gbrain"
 rm -f "$DATA_DIR/tools/tools" 2>/dev/null || true
 rm -f "$DATA_DIR/plugins/plugins" 2>/dev/null || true
-chown -R 1000:1000 "$DATA_DIR/tools" "$DATA_DIR/plugins" "$DATA_DIR/skills" 2>/dev/null || true
-chmod -R u+rwX,g+rwX "$DATA_DIR/tools" "$DATA_DIR/plugins" "$DATA_DIR/skills" 2>/dev/null || true
+chown -R 1000:1000 "$DATA_DIR/tools" "$DATA_DIR/plugins" "$DATA_DIR/skills" "$DATA_DIR/skills-inbox" 2>/dev/null || true
+chmod -R u+rwX,g+rwX "$DATA_DIR/tools" "$DATA_DIR/plugins" "$DATA_DIR/skills" "$DATA_DIR/skills-inbox" 2>/dev/null || true
 
 LOCAL_IMAGE=$(grep '^LOCAL_IMAGE_NAME=' "$ENV_FILE" | cut -d= -f2-)
 LOCAL_IMAGE="${LOCAL_IMAGE:-hermes-agent-webui:latest}"
