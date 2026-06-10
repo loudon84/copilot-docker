@@ -57,6 +57,8 @@ services:
       GBRAIN_VAULT: /data/hermes/obsidian-vault
       HERMES_VAULT_PATH: /data/hermes/obsidian-vault
       HERMES_SKILLS_PATH: /data/hermes/skills
+      HERMES_SKILL_INBOX_PATH: /data/hermes/skill-inbox
+      HERMES_ATTACHMENTS_PATH: /data/hermes/webui/attachments
       HERMES_WORKSPACE_PATH: /data/hermes/workspace
       HERMES_TOOLS_PATH: /data/hermes/tools
       HERMES_PLUGINS_PATH: /data/hermes/plugins

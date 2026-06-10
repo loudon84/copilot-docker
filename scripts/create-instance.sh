@@ -37,6 +37,8 @@ mkdir -p \
   "$DATA_DIR/evolution/runs" \
   "$DATA_DIR/evolution/reports" \
   "$DATA_DIR/skill-bundles" \
+  "$DATA_DIR/skill-inbox" \
+  "$DATA_DIR/attachments" \
   "$DATA_DIR/policies" \
   "$DATA_DIR/mcp" \
   "$DATA_DIR/backups" \
