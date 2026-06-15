@@ -49,7 +49,9 @@ nano local-registry.env
 | `LOCAL_REGISTRY_HOST` | Registry 宿主机 IP |
 | `LOCAL_REGISTRY_PORT` | 宿主机端口（默认 9900） |
 | `IMAGE_REPO` | 完整仓库路径，如 `192.168.102.247:9900/hermes-webui-expert` |
-| `IMAGE_TAG` | 引擎版本号，与 nodeskclaw 一致 |
+| `IMAGE_TAG` | 引擎版本号，与 nodeskclaw 一致（示例 `v2026.6.13-gbrain`） |
+| `GBRAIN_REF` | GBrain Git 分支（默认 `master`） |
+| `INSTALL_GBRAIN` | 是否在镜像层安装 GBrain（默认 `1`） |
 
 ### 3.2 启动 Registry
 
@@ -93,10 +95,16 @@ bash scripts/build-push-local-registry.sh
 bash scripts/build-push-local-registry.sh --dry-run
 
 # 指定版本号
-bash scripts/build-push-local-registry.sh --tag v2026.6.1
+bash scripts/build-push-local-registry.sh --tag v2026.6.13-gbrain
 
 # 仅本地构建不推送
 bash scripts/build-push-local-registry.sh --no-push
+```
+
+构建完成后建议验收镜像内容：
+
+```bash
+bash scripts/doctor-image.sh 192.168.102.247:9900/hermes-webui-expert:v2026.6.13-gbrain
 ```
 
 ### 3.5 验证
@@ -110,7 +118,7 @@ bash scripts/doctor-local-registry.sh
 ```text
 [pass] registry container running
 [pass] http://192.168.102.247:9900/v2/_catalog reachable
-[pass] hermes-webui-expert:v2026.6.1 exists
+[pass] hermes-webui-expert:v2026.6.13-gbrain exists
 [pass] docker insecure registry configured
 [pass] docker pull succeeded
 ```
@@ -142,12 +150,12 @@ bash scripts/stop-local-registry.sh --remove-data
 |------|----------|
 | 组织设置 → 镜像仓库 → Hermes 专家服务 | `192.168.102.247:9900/hermes-webui-expert` |
 | 用户名 / 密码 | **留空**（本地 registry 无需认证） |
-| 组织设置 → 引擎版本 → Hermes 专家服务 → 发布新版本 | `v2026.6.1`（与 `IMAGE_TAG` 一致） |
+| 组织设置 → 引擎版本 → Hermes 专家服务 → 发布新版本 | `v2026.6.13-gbrain`（与 `IMAGE_TAG` 一致） |
 
 部署时 nodeskclaw 将拉取：
 
 ```text
-192.168.102.247:9900/hermes-webui-expert:v2026.6.1
+192.168.102.247:9900/hermes-webui-expert:v2026.6.13-gbrain
 ```
 
 ## 5. 常见错误
@@ -213,7 +221,8 @@ scripts/start-local-registry.sh  # 启动 registry:2
 scripts/stop-local-registry.sh   # 停止 registry
 scripts/configure-insecure-registry.sh  # 配置 insecure-registries
 scripts/build-push-local-registry.sh    # 构建并推送
-scripts/doctor-local-registry.sh        # 健康检查
+scripts/doctor-image.sh                 # 镜像内容验收（GBrain / AIAgent）
+scripts/doctor-local-registry.sh        # Registry 链路健康检查
 ```
 
 ## 7. 与远程仓库方案的关系

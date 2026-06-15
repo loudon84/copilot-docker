@@ -18,6 +18,7 @@ services:
         HERMES_VERSION: ${HERMES_VERSION:-git-build}
         INSTALL_GBRAIN: ${INSTALL_GBRAIN:-1}
         GBRAIN_REPO: ${GBRAIN_REPO:-http://git.superic.com/aiplatform/gbrain.git}
+        GBRAIN_REF: ${GBRAIN_REF:-master}
         INSTALL_FILESYSTEM_MCP: ${INSTALL_FILESYSTEM_MCP:-1}
         INSTALL_CLAWSEC: ${INSTALL_CLAWSEC:-0}
         CLAWSEC_REPO: ${CLAWSEC_REPO:-http://git.superic.com/aiplatform/clawsec.git}
@@ -30,6 +31,8 @@ services:
     restart: unless-stopped
     ports:
       - "${HERMES_WEBUI_BIND:-0.0.0.0}:${HERMES_WEBUI_PORT:-8787}:8787"
+      # 可选，调试时开启 Gateway
+      # - "${HERMES_GATEWAY_BIND:-127.0.0.1}:${HERMES_GATEWAY_PORT:-8642}:8642"
     environment:
       WANTED_UID: "1000"
       WANTED_GID: "1000"
@@ -55,6 +58,7 @@ services:
       GBRAIN_ENABLED: ${GBRAIN_ENABLED:-1}
       GBRAIN_HOME: /data/hermes/gbrain
       GBRAIN_VAULT: /data/hermes/obsidian-vault
+      GBRAIN_COMMAND: ${GBRAIN_COMMAND:-/usr/local/bin/gbrain}
       HERMES_VAULT_PATH: /data/hermes/obsidian-vault
       HERMES_SKILLS_PATH: /data/hermes/skills
       HERMES_SKILL_INBOX_PATH: /data/hermes/skill-inbox

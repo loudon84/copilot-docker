@@ -1,7 +1,27 @@
 #!/usr/bin/env bash
 set -euo pipefail
-PROFILE="${1:?usage: up-instance.sh <profile> [--build]}"
-BUILD_FLAG="${2:-}"
+PROFILE="${1:?usage: up-instance.sh <profile> [--build] [--no-cache]}"
+shift || true
+
+BUILD_FLAG=0
+NO_CACHE_FLAG=0
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --build) BUILD_FLAG=1 ;;
+    --no-cache) NO_CACHE_FLAG=1 ;;
+    -h|--help)
+      echo "usage: up-instance.sh <profile> [--build] [--no-cache]"
+      exit 0
+      ;;
+    *)
+      echo "ERROR: unknown argument: $1" >&2
+      exit 1
+      ;;
+  esac
+  shift
+done
+
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV_FILE="$BASE_DIR/instances/$PROFILE/.env"
 [ -f "$ENV_FILE" ] || { echo "ERROR: missing env file: $ENV_FILE"; exit 1; }
@@ -25,15 +45,28 @@ chmod -R u+rwX,g+rwX "$DATA_DIR/tools" "$DATA_DIR/plugins" "$DATA_DIR/skills" "$
 LOCAL_IMAGE=$(grep '^LOCAL_IMAGE_NAME=' "$ENV_FILE" | cut -d= -f2-)
 LOCAL_IMAGE="${LOCAL_IMAGE:-hermes-agent-webui:latest}"
 
-if [ "$BUILD_FLAG" = "--build" ]; then
-  echo "[build] 强制重建镜像: $LOCAL_IMAGE"
-  docker compose --env-file "$ENV_FILE" -p "hermes-$PROFILE" build
+BUILD_ARGS=()
+if [ "$NO_CACHE_FLAG" = "1" ]; then
+  BUILD_ARGS+=(--no-cache)
+fi
+
+if [ "$BUILD_FLAG" = "1" ] || [ "$NO_CACHE_FLAG" = "1" ]; then
+  if [ "$NO_CACHE_FLAG" = "1" ]; then
+    echo "[build] 强制无缓存重建镜像: $LOCAL_IMAGE"
+  else
+    echo "[build] 强制重建镜像: $LOCAL_IMAGE"
+  fi
+  docker compose --env-file "$ENV_FILE" -p "hermes-$PROFILE" build "${BUILD_ARGS[@]}"
 elif ! docker image inspect "$LOCAL_IMAGE" >/dev/null 2>&1; then
   echo "[build] 镜像 $LOCAL_IMAGE 不存在，首次构建..."
   echo "        提示: 多实例部署可先 bash scripts/build-image.sh 构建一次，后续实例无需重复 build"
   docker compose --env-file "$ENV_FILE" -p "hermes-$PROFILE" build
 else
   echo "[skip] 复用已有镜像: $LOCAL_IMAGE"
+  echo "       若 Dockerfile 已变更，请执行："
+  echo "         bash scripts/up-instance.sh $PROFILE --build"
+  echo "       或："
+  echo "         bash scripts/build-image.sh $PROFILE --no-cache"
 fi
 
 docker compose --env-file "$ENV_FILE" -p "hermes-$PROFILE" up -d

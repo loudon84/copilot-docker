@@ -23,9 +23,8 @@ mcp_servers:
       resources: true
       prompts: false
   gbrain:
-    command: "gbrain"
-    args:
-      - "serve"
+    command: "/usr/local/bin/gbrain"
+    args: []
     enabled: true
     tools:
       resources: true

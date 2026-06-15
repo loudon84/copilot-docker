@@ -125,13 +125,47 @@ PY
 # Optional GBrain and MCP runtime tooling. Use internal mirrors in production.
 ARG INSTALL_GBRAIN=1
 ARG GBRAIN_REPO=http://git.superic.com/aiplatform/gbrain.git
+ARG GBRAIN_REF=master
+
+ENV BUN_INSTALL=/opt/bun
+ENV PATH=/opt/bun/bin:/usr/local/bin:$PATH
+
 RUN if [ "${INSTALL_GBRAIN}" = "1" ]; then \
-      (curl -fsSL https://bun.sh/install | bash -s -- bun-v1.2.15 \
-        && ln -sf /root/.bun/bin/bun /usr/local/bin/bun \
-        && ln -sf /root/.bun/bin/bunx /usr/local/bin/bunx \
-        && bun install -g "${GBRAIN_REPO}" \
-        && echo "OK: gbrain installed") \
-      || echo "WARN: gbrain install failed; init-brain-runtime.sh will skip gbrain."; \
+      set -eux; \
+      \
+      echo "== install bun =="; \
+      curl -fsSL https://bun.sh/install | bash -s -- bun-v1.2.15; \
+      ln -sf /opt/bun/bin/bun /usr/local/bin/bun; \
+      ln -sf /opt/bun/bin/bunx /usr/local/bin/bunx; \
+      bun --version; \
+      \
+      echo "== clone gbrain =="; \
+      rm -rf /opt/gbrain; \
+      git clone --depth=1 --branch "${GBRAIN_REF}" "${GBRAIN_REPO}" /opt/gbrain; \
+      test -f /opt/gbrain/package.json; \
+      \
+      echo "== inspect gbrain package =="; \
+      cd /opt/gbrain; \
+      cat package.json; \
+      \
+      echo "== install gbrain from local repo =="; \
+      bun install; \
+      (bun install -g /opt/gbrain || npm install -g .); \
+      \
+      echo "== locate gbrain =="; \
+      find /opt/bun /root/.bun /home/hermeswebui/.bun /usr/local/bin -type f -name gbrain -print || true; \
+      GBRAIN_BIN="$(find /opt/bun /root/.bun /home/hermeswebui/.bun /usr/local/bin -type f -name gbrain 2>/dev/null | head -1)"; \
+      test -n "$GBRAIN_BIN"; \
+      chmod +x "$GBRAIN_BIN"; \
+      ln -sf "$GBRAIN_BIN" /usr/local/bin/gbrain; \
+      \
+      chmod -R a+rX /opt/bun /opt/gbrain; \
+      command -v gbrain; \
+      gbrain --help >/tmp/gbrain-help.txt 2>&1 || true; \
+      head -80 /tmp/gbrain-help.txt || true; \
+      echo "OK: gbrain installed"; \
+    else \
+      echo "SKIP: INSTALL_GBRAIN=${INSTALL_GBRAIN}"; \
     fi
 
 ARG INSTALL_FILESYSTEM_MCP=1
@@ -156,11 +190,27 @@ ENV HERMES_WEBUI_STATE_DIR=/data/hermes/webui
 ENV GBRAIN_HOME=/data/hermes/gbrain
 ENV GBRAIN_VAULT=/data/hermes/obsidian-vault
 
-RUN mkdir -p /data/hermes /workspace /uv_cache /app \
+RUN mkdir -p /data/hermes /workspace /uv_cache /app /opt/bun /opt/gbrain \
   && touch /app/venv/.deps_installed \
   && chown -R hermeswebui:hermeswebui \
-      /data /workspace /uv_cache /app /app/venv /home/hermeswebui/.hermes /opt/hermes-agent \
-  && chmod -R u+rwX,g+rwX /data /workspace /uv_cache /app /app/venv /home/hermeswebui/.hermes
+      /data \
+      /workspace \
+      /uv_cache \
+      /app \
+      /app/venv \
+      /home/hermeswebui/.hermes \
+      /opt/hermes-agent \
+      /opt/bun \
+      /opt/gbrain \
+  && chmod -R u+rwX,g+rwX \
+      /data \
+      /workspace \
+      /uv_cache \
+      /app \
+      /app/venv \
+      /home/hermeswebui/.hermes \
+      /opt/bun \
+      /opt/gbrain
 
 
 USER hermeswebui

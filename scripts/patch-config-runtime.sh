@@ -26,6 +26,8 @@ set +a
 
 HINDSIGHT_API_URL="${HINDSIGHT_API_URL:-http://hindsight.superic.com:8888}"
 HINDSIGHT_BANK_ID="${HINDSIGHT_BANK_ID:-hermes-$PROFILE}"
+GBRAIN_ENABLED="${GBRAIN_ENABLED:-1}"
+GBRAIN_COMMAND="${GBRAIN_COMMAND:-/usr/local/bin/gbrain}"
 
 mkdir -p "$(dirname "$CONFIG_FILE")"
 if [ ! -f "$CONFIG_FILE" ]; then
@@ -37,4 +39,6 @@ python3 "$PATCH_PY" \
   --config "$CONFIG_FILE" \
   --profile "$PROFILE" \
   --hindsight-api-url "$HINDSIGHT_API_URL" \
-  --hindsight-bank-id "$HINDSIGHT_BANK_ID"
+  --hindsight-bank-id "$HINDSIGHT_BANK_ID" \
+  --gbrain-enabled "$GBRAIN_ENABLED" \
+  --gbrain-command "$GBRAIN_COMMAND"

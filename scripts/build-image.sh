@@ -63,5 +63,6 @@ docker compose --env-file "$ENV_FILE" -p hermes-build "${BUILD_ARGS[@]}" build
 
 echo
 echo "OK: 镜像已就绪 → $LOCAL_IMAGE"
+echo "验收: bash scripts/doctor-image.sh $LOCAL_IMAGE"
 echo "后续实例: bash scripts/create-instance.sh <profile> <port> <expert>"
 echo "          bash scripts/up-instance.sh <profile>"

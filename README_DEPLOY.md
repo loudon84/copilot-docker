@@ -77,7 +77,7 @@ HERMES_WEBUI_REPO=http://git.superic.com/aiplatform/hermes-webui.git
 HERMES_AGENT_REPO=http://git.superic.com/aiplatform/hermes-agent.git
 ```
 
-如需在构建阶段安装 GBrain，需要能访问 `http://git.superic.com/aiplatform/gbrain.git`，或者在实例 `.env` 中把 `GBRAIN_REPO` 改成内网 mirror。
+如需在构建阶段安装 GBrain，需要能访问 `http://git.superic.com/aiplatform/gbrain.git`（可通过 `GBRAIN_REF=master` 指定分支），或者在实例 `.env` 中把 `GBRAIN_REPO` 改成内网 mirror。
 
 ## 4. 解压与授权
 
@@ -121,7 +121,10 @@ memory:
 
 mcp_servers:
   obsidian_vault: ...
-  gbrain: ...
+  gbrain:
+    command: /usr/local/bin/gbrain
+    args: []
+    enabled: true
 
 auxiliary:
   curator: ...
@@ -193,6 +196,31 @@ CLAWSEC_REPO=http://git.superic.com/aiplatform/clawsec.git
 
 改成内网 Git mirror。
 
+### 5.1 镜像验收（GBrain / Hermes Agent）
+
+构建完成后建议执行：
+
+```bash
+bash scripts/doctor-image.sh hermes-agent-webui:latest
+```
+
+通过标准：
+
+```text
+which gbrain → /usr/local/bin/gbrain
+gbrain --help 有输出
+AIAgent import 成功
+```
+
+若 Dockerfile 已变更但本地仍有旧镜像，需强制重建：
+
+```bash
+bash scripts/build-image.sh --no-cache
+# 或
+bash scripts/up-instance.sh <profile> --build
+bash scripts/up-instance.sh <profile> --no-cache
+```
+
 ## 6. 启动容器
 
 ```bash
@@ -203,7 +231,10 @@ bash scripts/up-instance.sh writer
 
 ```bash
 bash scripts/up-instance.sh writer --build
+bash scripts/up-instance.sh writer --no-cache
 ```
+
+`--no-cache` 会强制无缓存重建镜像（Dockerfile 变更后推荐使用）。
 
 查看状态：
 
@@ -289,33 +320,27 @@ bash scripts/install-self-evolution.sh writer
 
 ## 9. 验证
 
+镜像级（构建后）：
+
+```bash
+bash scripts/doctor-image.sh hermes-agent-webui:latest
+```
+
+实例级：
+
 ```bash
 bash scripts/doctor-instance.sh writer
 ```
 
-检查 skills 数量：
+检查 GBrain 可执行文件与 config：
 
 ```bash
-docker exec -it hermes-writer bash -lc 'find /data/hermes/skills -name SKILL.md | wc -l'
+docker exec -it hermes-writer bash -lc 'which gbrain && gbrain --help 2>&1 | head -80'
+docker exec -it hermes-writer bash -lc 'grep -n "gbrain" -A8 -B4 /data/hermes/config.yaml'
+docker logs --tail=200 hermes-writer | grep -i "gbrain\|missing executable"
 ```
 
-检查 config：
-
-```bash
-docker exec -it hermes-writer bash -lc 'cat /data/hermes/config.yaml | sed -n "1,180p"'
-```
-
-检查 vault：
-
-```bash
-docker exec -it hermes-writer bash -lc 'find /data/hermes/obsidian-vault -maxdepth 2 -type d | sort'
-```
-
-检查 GBrain：
-
-```bash
-docker exec -it hermes-writer bash -lc 'command -v gbrain && gbrain --help | head'
-```
+通过标准：`command` 为 `/usr/local/bin/gbrain`，日志无 `missing executable 'gbrain'`。
 
 ## 10. 新增 finance 实例
 
@@ -391,6 +416,7 @@ cp registry.env.example registry.env
 IMAGE_REPO=cr.volces.com/<namespace>/hermes-webui-expert
 IMAGE_TAG=v2026.6.8
 REGISTRY_HOST=cr.volces.com
+GBRAIN_REF=master
 ```
 
 ### 14.2 登录并构建推送
@@ -413,6 +439,8 @@ docker buildx build \
   --build-arg HERMES_AGENT_REF="master" \
   --build-arg HERMES_VERSION="${IMAGE_TAG}" \
   --build-arg INSTALL_GBRAIN=1 \
+  --build-arg GBRAIN_REPO="http://git.superic.com/aiplatform/gbrain.git" \
+  --build-arg GBRAIN_REF=master \
   --build-arg INSTALL_FILESYSTEM_MCP=1 \
   --build-arg INSTALL_CLAWSEC=0 \
   --push \
@@ -451,7 +479,7 @@ bash scripts/build-push-registry.sh --no-push
 
 - 已安装 `docker` + `docker buildx`（见 `scripts/install-docker-ubuntu24.sh`）
 - 构建期可访问 `git.superic.com` 上的 hermes-webui / hermes-agent
-- 若启用 GBrain，构建机需能访问 `GBRAIN_REPO`（或改为内网 mirror）
+- 若启用 GBrain，构建机需能访问 `GBRAIN_REPO`（或改为内网 mirror），并通过 `GBRAIN_REF` 指定分支（默认 `master`）
 
 ## 15. 本地 Registry 测试模式
 
@@ -465,11 +493,12 @@ bash scripts/build-push-registry.sh --no-push
 
 ```bash
 cp local-registry.env.example local-registry.env
-# 编辑 LOCAL_REGISTRY_HOST、IMAGE_REPO、IMAGE_TAG
+# 编辑 LOCAL_REGISTRY_HOST、IMAGE_REPO、IMAGE_TAG、GBRAIN_REF
 
 bash scripts/start-local-registry.sh
 sudo bash scripts/configure-insecure-registry.sh
-bash scripts/build-push-local-registry.sh
+bash scripts/build-push-local-registry.sh --tag v2026.6.13-gbrain
+bash scripts/doctor-image.sh <IMAGE_REPO>:<IMAGE_TAG>
 bash scripts/doctor-local-registry.sh
 ```
 

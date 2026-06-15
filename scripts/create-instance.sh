@@ -44,7 +44,8 @@ mkdir -p \
   "$DATA_DIR/backups" \
   "$DATA_DIR/logs" \
   "$DATA_DIR/sessions" \
-  "$DATA_DIR/webui"
+  "$DATA_DIR/webui" \
+  "$DATA_DIR/webui/attachments"
 
 if [ ! -f "$INSTANCE_DIR/.env" ]; then
   PASS="$(openssl rand -base64 32 | tr -d '/+=' | cut -c1-24)"
@@ -66,6 +67,7 @@ HINDSIGHT_API_URL=http://hindsight.superic.com:8888
 HINDSIGHT_BANK_ID=hermes-$PROFILE
 INSTALL_GBRAIN=1
 GBRAIN_REPO=http://git.superic.com/aiplatform/gbrain.git
+GBRAIN_REF=master
 INSTALL_FILESYSTEM_MCP=1
 INSTALL_CLAWSEC=0
 CLAWSEC_REPO=http://git.superic.com/aiplatform/clawsec.git

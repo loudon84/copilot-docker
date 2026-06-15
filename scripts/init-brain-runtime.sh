@@ -73,6 +73,8 @@ if config_path.exists():
 profile = os.environ.get('HERMES_PROFILE', 'default')
 hindsight_api = os.environ.get('HINDSIGHT_API_URL', 'http://hindsight.superic.com:8888')
 hindsight_bank = os.environ.get('HINDSIGHT_BANK_ID', f'hermes-{profile}')
+gbrain_enabled = os.environ.get('GBRAIN_ENABLED', '1') not in ('0', 'false', 'False')
+gbrain_command = os.environ.get('GBRAIN_COMMAND', '/usr/local/bin/gbrain')
 
 data['memory'] = {
     'provider': 'hindsight',
@@ -89,9 +91,9 @@ mcp.setdefault('obsidian_vault', {
     'tools': {'resources': True, 'prompts': False},
 })
 mcp.setdefault('gbrain', {
-    'command': 'gbrain',
-    'args': ['serve'],
-    'enabled': True,
+    'command': gbrain_command,
+    'args': [],
+    'enabled': gbrain_enabled,
     'tools': {'resources': True, 'prompts': False},
 })
 

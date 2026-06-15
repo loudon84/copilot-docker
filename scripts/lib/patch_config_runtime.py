@@ -32,7 +32,13 @@ def deep_update(target: dict, patch: dict) -> None:
             target[key] = value
 
 
-def runtime_patch(profile: str, hindsight_api_url: str, hindsight_bank_id: str) -> dict:
+def runtime_patch(
+    profile: str,
+    hindsight_api_url: str,
+    hindsight_bank_id: str,
+    gbrain_enabled: bool = True,
+    gbrain_command: str = "/usr/local/bin/gbrain",
+) -> dict:
     bank_id = hindsight_bank_id or f"hermes-{profile}"
     return {
         "memory": {
@@ -53,9 +59,9 @@ def runtime_patch(profile: str, hindsight_api_url: str, hindsight_bank_id: str) 
                 "tools": {"resources": True, "prompts": False},
             },
             "gbrain": {
-                "command": "gbrain",
-                "args": ["serve"],
-                "enabled": True,
+                "command": gbrain_command,
+                "args": [],
+                "enabled": gbrain_enabled,
                 "tools": {"resources": True, "prompts": False},
             },
         },
@@ -88,10 +94,19 @@ def main() -> int:
     parser.add_argument("--profile", required=True)
     parser.add_argument("--hindsight-api-url", default="http://hindsight.superic.com:8888")
     parser.add_argument("--hindsight-bank-id", default="")
+    parser.add_argument("--gbrain-enabled", default="1")
+    parser.add_argument("--gbrain-command", default="/usr/local/bin/gbrain")
     args = parser.parse_args()
 
+    gbrain_enabled = args.gbrain_enabled not in ("0", "false", "False")
     data = load_yaml(args.config)
-    patch = runtime_patch(args.profile, args.hindsight_api_url, args.hindsight_bank_id)
+    patch = runtime_patch(
+        args.profile,
+        args.hindsight_api_url,
+        args.hindsight_bank_id,
+        gbrain_enabled=gbrain_enabled,
+        gbrain_command=args.gbrain_command,
+    )
     deep_update(data, patch)
 
     args.config.parent.mkdir(parents=True, exist_ok=True)
