@@ -19,6 +19,7 @@ services:
         INSTALL_GBRAIN: ${INSTALL_GBRAIN:-1}
         GBRAIN_REPO: ${GBRAIN_REPO:-http://git.superic.com/aiplatform/gbrain.git}
         GBRAIN_REF: ${GBRAIN_REF:-master}
+        BUN_VERSION: ${BUN_VERSION:-bun-v1.2.15}
         INSTALL_FILESYSTEM_MCP: ${INSTALL_FILESYSTEM_MCP:-1}
         INSTALL_CLAWSEC: ${INSTALL_CLAWSEC:-0}
         CLAWSEC_REPO: ${CLAWSEC_REPO:-http://git.superic.com/aiplatform/clawsec.git}

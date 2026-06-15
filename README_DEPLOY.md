@@ -152,9 +152,27 @@ bash scripts/patch-config-runtime.sh <profile>
 
 所有 instance 共用同一镜像 `hermes-agent-webui:latest`。**只需构建一次**，后续创建多个 instance 时直接 `up-instance` 即可，无需重复 `docker compose build`。
 
+GBrain 安装由 [`docker/install-gbrain.sh`](docker/install-gbrain.sh) 负责（`git clone` + `npm install -g .`，失败则构建失败）。
+
 ```bash
-# 推荐：统一构建入口
+# 推荐：重建共享镜像并自动 doctor 验收
+bash scripts/rebuild-shared-image.sh zhang-zhen --no-cache
+
+# 或：统一构建入口（构建后同样自动 doctor，失败则 exit 1）
 bash scripts/build-image.sh
+```
+
+镜像更新后，让所有实例使用新镜像（**不要**只用 `docker restart`）：
+
+```bash
+bash scripts/recreate-all-instances.sh
+```
+
+单实例 force-recreate：
+
+```bash
+docker compose --env-file instances/<profile>/.env \
+  -p hermes-<profile> up -d --no-build --force-recreate
 ```
 
 或借用某个 instance 的构建参数：
@@ -198,7 +216,7 @@ CLAWSEC_REPO=http://git.superic.com/aiplatform/clawsec.git
 
 ### 5.1 镜像验收（GBrain / Hermes Agent）
 
-构建完成后建议执行：
+`build-image.sh` / `rebuild-shared-image.sh` 构建成功后会**自动**执行 `doctor-image.sh`，也可手动验收：
 
 ```bash
 bash scripts/doctor-image.sh hermes-agent-webui:latest
@@ -207,6 +225,7 @@ bash scripts/doctor-image.sh hermes-agent-webui:latest
 通过标准：
 
 ```text
+which bun 成功
 which gbrain → /usr/local/bin/gbrain
 gbrain --help 有输出
 AIAgent import 成功
@@ -497,7 +516,7 @@ cp local-registry.env.example local-registry.env
 
 bash scripts/start-local-registry.sh
 sudo bash scripts/configure-insecure-registry.sh
-bash scripts/build-push-local-registry.sh --tag v2026.6.13-gbrain
+bash scripts/build-push-local-registry.sh --tag v1.4.1-hotfix-gbrain
 bash scripts/doctor-image.sh <IMAGE_REPO>:<IMAGE_TAG>
 bash scripts/doctor-local-registry.sh
 ```

@@ -15,7 +15,13 @@ repaired=0
 for DATA_DIR in "$INSTANCES_ROOT"/*/data/hermes; do
   [ -d "$DATA_DIR" ] || continue
   PROFILE="$(basename "$(dirname "$(dirname "$DATA_DIR")")")"
+  ENV_FILE="$INSTANCES_ROOT/$PROFILE/.env"
   echo "[repair] $PROFILE -> $DATA_DIR"
+
+  if [ -f "$ENV_FILE" ]; then
+    grep -q '^GBRAIN_REF=' "$ENV_FILE" || echo 'GBRAIN_REF=master' >> "$ENV_FILE"
+    grep -q '^BUN_VERSION=' "$ENV_FILE" || echo 'BUN_VERSION=bun-v1.2.15' >> "$ENV_FILE"
+  fi
 
   for d in "${REQUIRED_DIRS[@]}"; do
     mkdir -p "$DATA_DIR/$d"

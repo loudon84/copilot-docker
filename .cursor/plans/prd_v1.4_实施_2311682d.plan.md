@@ -113,7 +113,7 @@ flowchart LR
 - [`scripts/create-instance.sh`](scripts/create-instance.sh)：`.env` 模板增加 `GBRAIN_REF=master`；`mkdir` 增加 `"$DATA_DIR/webui/attachments"`
 - [`.env.example`](.env.example)：补充 `INSTALL_GBRAIN`、`GBRAIN_REPO`、`GBRAIN_REF`（供 `build-image.sh` 无 instance 时使用）
 - [`registry.env.example`](registry.env.example)：增加 `GBRAIN_REF=master`
-- [`local-registry.env.example`](local-registry.env.example)：增加 `GBRAIN_REF=master`；`IMAGE_TAG` 更新为 `v2026.6.13-gbrain`
+- [`local-registry.env.example`](local-registry.env.example)：增加 `GBRAIN_REF=master`；`IMAGE_TAG` 更新为 `v2026.6.15`
 
 ---
 
@@ -182,7 +182,7 @@ bash scripts/doctor-image.sh hermes-agent-webui:latest
 
 ### [`README_LOCAL_REGISTRY.md`](README_LOCAL_REGISTRY.md)
 
-- 配置示例增加 `GBRAIN_REF=master`、`IMAGE_TAG=v2026.6.13-gbrain`
+- 配置示例增加 `GBRAIN_REF=master`、`IMAGE_TAG=v2026.6.15`
 - 发布流程增加构建后 `doctor-image.sh` 步骤
 
 ---
@@ -202,7 +202,7 @@ docker exec hermes-<profile> bash -lc 'which gbrain; grep -n gbrain -A8 /data/he
 docker logs --tail=200 hermes-<profile> | grep -i "gbrain\|missing executable"
 
 # 18.3 Registry 级（需 local-registry.env 已配置）
-bash scripts/build-push-local-registry.sh --tag v2026.6.13-gbrain
+bash scripts/build-push-local-registry.sh --tag v2026.6.15
 bash scripts/doctor-local-registry.sh
 ```
 

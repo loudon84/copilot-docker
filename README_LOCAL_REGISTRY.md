@@ -49,8 +49,9 @@ nano local-registry.env
 | `LOCAL_REGISTRY_HOST` | Registry 宿主机 IP |
 | `LOCAL_REGISTRY_PORT` | 宿主机端口（默认 9900） |
 | `IMAGE_REPO` | 完整仓库路径，如 `192.168.102.247:9900/hermes-webui-expert` |
-| `IMAGE_TAG` | 引擎版本号，与 nodeskclaw 一致（示例 `v2026.6.13-gbrain`） |
+| `IMAGE_TAG` | 引擎版本号，与 nodeskclaw 一致（示例 `v2026.6.15`） |
 | `GBRAIN_REF` | GBrain Git 分支（默认 `master`） |
+| `BUN_VERSION` | Bun 版本（默认 `bun-v1.2.15`） |
 | `INSTALL_GBRAIN` | 是否在镜像层安装 GBrain（默认 `1`） |
 
 ### 3.2 启动 Registry
@@ -86,7 +87,7 @@ sudo bash scripts/configure-insecure-registry.sh
 bash scripts/build-push-local-registry.sh
 ```
 
-脚本采用 **`--load` 构建到本地 daemon，再 `docker push`**，避免 `buildx --push` 与 HTTP insecure registry 不兼容。
+脚本采用 **`--load` 构建到本地 daemon，推送前自动 `doctor-image.sh` 门禁，再 `docker push`**，避免 buildx `--push` 与 HTTP insecure registry 不兼容。
 
 其他选项：
 
@@ -95,16 +96,16 @@ bash scripts/build-push-local-registry.sh
 bash scripts/build-push-local-registry.sh --dry-run
 
 # 指定版本号
-bash scripts/build-push-local-registry.sh --tag v2026.6.13-gbrain
+bash scripts/build-push-local-registry.sh --tag v2026.6.15
 
 # 仅本地构建不推送
 bash scripts/build-push-local-registry.sh --no-push
 ```
 
-构建完成后建议验收镜像内容：
+构建完成后脚本会自动执行 `doctor-image.sh`；也可手动验收：
 
 ```bash
-bash scripts/doctor-image.sh 192.168.102.247:9900/hermes-webui-expert:v2026.6.13-gbrain
+bash scripts/doctor-image.sh 192.168.102.247:9900/hermes-webui-expert:v2026.6.15
 ```
 
 ### 3.5 验证
@@ -118,7 +119,7 @@ bash scripts/doctor-local-registry.sh
 ```text
 [pass] registry container running
 [pass] http://192.168.102.247:9900/v2/_catalog reachable
-[pass] hermes-webui-expert:v2026.6.13-gbrain exists
+[pass] hermes-webui-expert:v2026.6.15 exists
 [pass] docker insecure registry configured
 [pass] docker pull succeeded
 ```
@@ -150,12 +151,12 @@ bash scripts/stop-local-registry.sh --remove-data
 |------|----------|
 | 组织设置 → 镜像仓库 → Hermes 专家服务 | `192.168.102.247:9900/hermes-webui-expert` |
 | 用户名 / 密码 | **留空**（本地 registry 无需认证） |
-| 组织设置 → 引擎版本 → Hermes 专家服务 → 发布新版本 | `v2026.6.13-gbrain`（与 `IMAGE_TAG` 一致） |
+| 组织设置 → 引擎版本 → Hermes 专家服务 → 发布新版本 | `v2026.6.15`（与 `IMAGE_TAG` 一致） |
 
 部署时 nodeskclaw 将拉取：
 
 ```text
-192.168.102.247:9900/hermes-webui-expert:v2026.6.13-gbrain
+192.168.102.247:9900/hermes-webui-expert:v2026.6.15
 ```
 
 ## 5. 常见错误
@@ -220,9 +221,12 @@ local-registry.env               # 本地配置（勿提交）
 scripts/start-local-registry.sh  # 启动 registry:2
 scripts/stop-local-registry.sh   # 停止 registry
 scripts/configure-insecure-registry.sh  # 配置 insecure-registries
-scripts/build-push-local-registry.sh    # 构建并推送
-scripts/doctor-image.sh                 # 镜像内容验收（GBrain / AIAgent）
+scripts/build-push-local-registry.sh    # 构建、doctor 门禁、推送
+scripts/rebuild-shared-image.sh         # 重建共享 latest 并 doctor
+scripts/recreate-all-instances.sh       # 批量 force-recreate 实例
+scripts/doctor-image.sh                 # 镜像内容验收（GBrain / bun / AIAgent）
 scripts/doctor-local-registry.sh        # Registry 链路健康检查
+docker/install-gbrain.sh                # GBrain 镜像层安装脚本
 ```
 
 ## 7. 与远程仓库方案的关系

@@ -45,31 +45,30 @@ chmod -R u+rwX,g+rwX "$DATA_DIR/tools" "$DATA_DIR/plugins" "$DATA_DIR/skills" "$
 LOCAL_IMAGE=$(grep '^LOCAL_IMAGE_NAME=' "$ENV_FILE" | cut -d= -f2-)
 LOCAL_IMAGE="${LOCAL_IMAGE:-hermes-agent-webui:latest}"
 
-BUILD_ARGS=()
+BUILD_ARGS=(--progress=plain)
 if [ "$NO_CACHE_FLAG" = "1" ]; then
   BUILD_ARGS+=(--no-cache)
 fi
 
-if [ "$BUILD_FLAG" = "1" ] || [ "$NO_CACHE_FLAG" = "1" ]; then
-  if [ "$NO_CACHE_FLAG" = "1" ]; then
-    echo "[build] 强制无缓存重建镜像: $LOCAL_IMAGE"
-  else
-    echo "[build] 强制重建镜像: $LOCAL_IMAGE"
-  fi
+if [ "$NO_CACHE_FLAG" = "1" ]; then
+  echo "[build] 无缓存重建镜像: $LOCAL_IMAGE"
+  docker compose --env-file "$ENV_FILE" -p "hermes-$PROFILE" build "${BUILD_ARGS[@]}"
+elif [ "$BUILD_FLAG" = "1" ]; then
+  echo "[build] 强制重建镜像: $LOCAL_IMAGE"
   docker compose --env-file "$ENV_FILE" -p "hermes-$PROFILE" build "${BUILD_ARGS[@]}"
 elif ! docker image inspect "$LOCAL_IMAGE" >/dev/null 2>&1; then
   echo "[build] 镜像 $LOCAL_IMAGE 不存在，首次构建..."
   echo "        提示: 多实例部署可先 bash scripts/build-image.sh 构建一次，后续实例无需重复 build"
-  docker compose --env-file "$ENV_FILE" -p "hermes-$PROFILE" build
+  docker compose --env-file "$ENV_FILE" -p "hermes-$PROFILE" build --progress=plain
 else
   echo "[skip] 复用已有镜像: $LOCAL_IMAGE"
-  echo "       若 Dockerfile 已变更，请执行："
-  echo "         bash scripts/up-instance.sh $PROFILE --build"
-  echo "       或："
-  echo "         bash scripts/build-image.sh $PROFILE --no-cache"
+  echo "       提示：如果 Dockerfile 已修改，请执行："
+  echo "         bash scripts/up-instance.sh $PROFILE --no-cache"
+  echo "       提示：如果只需要让当前实例使用最新 image，请执行："
+  echo "         docker compose --env-file instances/$PROFILE/.env -p hermes-$PROFILE up -d --no-build --force-recreate"
 fi
 
-docker compose --env-file "$ENV_FILE" -p "hermes-$PROFILE" up -d
+docker compose --env-file "$ENV_FILE" -p "hermes-$PROFILE" up -d --no-build
 
 sleep 3
 STATE=$(docker inspect --format '{{.State.Status}}' "hermes-$PROFILE" 2>/dev/null || echo "unknown")

@@ -71,6 +71,7 @@ HERMES_AGENT_REF="${HERMES_AGENT_REF:-master}"
 INSTALL_GBRAIN="${INSTALL_GBRAIN:-1}"
 GBRAIN_REPO="${GBRAIN_REPO:-http://git.superic.com/aiplatform/gbrain.git}"
 GBRAIN_REF="${GBRAIN_REF:-master}"
+BUN_VERSION="${BUN_VERSION:-bun-v1.2.15}"
 INSTALL_FILESYSTEM_MCP="${INSTALL_FILESYSTEM_MCP:-1}"
 INSTALL_CLAWSEC="${INSTALL_CLAWSEC:-0}"
 CLAWSEC_REPO="${CLAWSEC_REPO:-http://git.superic.com/aiplatform/clawsec.git}"
@@ -102,6 +103,7 @@ BUILD_ARGS=(
   --build-arg "INSTALL_GBRAIN=${INSTALL_GBRAIN}"
   --build-arg "GBRAIN_REPO=${GBRAIN_REPO}"
   --build-arg "GBRAIN_REF=${GBRAIN_REF}"
+  --build-arg "BUN_VERSION=${BUN_VERSION}"
   --build-arg "INSTALL_FILESYSTEM_MCP=${INSTALL_FILESYSTEM_MCP}"
   --build-arg "INSTALL_CLAWSEC=${INSTALL_CLAWSEC}"
   --build-arg "CLAWSEC_REPO=${CLAWSEC_REPO}"
@@ -179,6 +181,11 @@ if [ "$NO_PUSH" = "1" ]; then
   echo "  docker images ${IMAGE_REPO}"
   exit 0
 fi
+
+LOCAL_IMAGE_NAME="${LOCAL_IMAGE_NAME:-hermes-agent-webui:latest}"
+echo
+echo "[doctor] 推送前验收: $FULL_IMAGE"
+bash "$BASE_DIR/scripts/doctor-image.sh" "$FULL_IMAGE"
 
 echo
 echo "[push] ${FULL_IMAGE}"

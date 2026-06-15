@@ -68,6 +68,7 @@ HINDSIGHT_BANK_ID=hermes-$PROFILE
 INSTALL_GBRAIN=1
 GBRAIN_REPO=http://git.superic.com/aiplatform/gbrain.git
 GBRAIN_REF=master
+BUN_VERSION=bun-v1.2.15
 INSTALL_FILESYSTEM_MCP=1
 INSTALL_CLAWSEC=0
 CLAWSEC_REPO=http://git.superic.com/aiplatform/clawsec.git

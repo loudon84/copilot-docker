@@ -49,7 +49,7 @@ fi
 LOCAL_IMAGE=$(grep '^LOCAL_IMAGE_NAME=' "$ENV_FILE" | cut -d= -f2-)
 LOCAL_IMAGE="${LOCAL_IMAGE:-hermes-agent-webui:latest}"
 
-BUILD_ARGS=()
+BUILD_ARGS=(--progress=plain)
 if [ "$NO_CACHE" = "1" ]; then
   BUILD_ARGS+=(--no-cache)
 fi
@@ -59,10 +59,14 @@ echo "[env]   $ENV_FILE"
 echo "[hint]  构建完成后，所有 instance 共用此镜像，无需逐实例 build"
 echo
 
-docker compose --env-file "$ENV_FILE" -p hermes-build "${BUILD_ARGS[@]}" build
+docker compose --env-file "$ENV_FILE" -p hermes-build build "${BUILD_ARGS[@]}"
+
+echo
+echo "== image doctor =="
+bash "$BASE_DIR/scripts/doctor-image.sh" "$LOCAL_IMAGE"
 
 echo
 echo "OK: 镜像已就绪 → $LOCAL_IMAGE"
-echo "验收: bash scripts/doctor-image.sh $LOCAL_IMAGE"
 echo "后续实例: bash scripts/create-instance.sh <profile> <port> <expert>"
 echo "          bash scripts/up-instance.sh <profile>"
+echo "镜像更新后批量重建容器: bash scripts/recreate-all-instances.sh"
