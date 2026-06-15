@@ -72,6 +72,7 @@ CLAWSEC_REPO=http://git.superic.com/aiplatform/clawsec.git
 GBRAIN_ENABLED=1
 HERMES_CURATOR_ENABLED=1
 HERMES_SELF_EVOLUTION_ENABLED=0
+TZ=Asia/Shanghai
 
 USE_CN_MIRRORS=1
 APT_MIRROR=https://mirrors.aliyun.com/debian

@@ -64,6 +64,7 @@ services:
       HERMES_PLUGINS_PATH: /data/hermes/plugins
       HERMES_CURATOR_ENABLED: ${HERMES_CURATOR_ENABLED:-1}
       HERMES_SELF_EVOLUTION_ENABLED: ${HERMES_SELF_EVOLUTION_ENABLED:-0}
+      TZ: Asia/Shanghai
     volumes:
       - ./instances/${HERMES_PROFILE:-default}/data/hermes:/data/hermes
       - ./instances/${HERMES_PROFILE:-default}/data/hermes/tools:/home/hermeswebui/.hermes/tools
