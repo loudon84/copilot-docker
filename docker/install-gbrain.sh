@@ -57,14 +57,19 @@ console.log("scripts:", JSON.stringify(pkg.scripts || null, null, 2));
 NODE
 
 echo "== install dependencies =="
+export npm_config_legacy_peer_deps=true
+export NPM_CONFIG_LEGACY_PEER_DEPS=true
+
+npm config set legacy-peer-deps true
+
 if [ -f package-lock.json ]; then
-  npm ci || npm install
+  npm ci --legacy-peer-deps || npm install --legacy-peer-deps
 else
-  npm install
+  npm install --legacy-peer-deps
 fi
 
-echo "== install gbrain globally by npm =="
-npm install -g .
+echo "== try install gbrain globally by npm =="
+npm install -g . --legacy-peer-deps || echo "WARN: npm global install failed, will create wrapper fallback"
 
 echo "== check global gbrain =="
 if ! command -v gbrain >/dev/null 2>&1; then

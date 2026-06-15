@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PROFILE="${1:-zhang-zhen}"
+PROFILE="${1:-common-writer}"
 BUILD_FLAG="${2:---no-cache}"
 
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

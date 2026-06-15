@@ -156,7 +156,7 @@ GBrain 安装由 [`docker/install-gbrain.sh`](docker/install-gbrain.sh) 负责�
 
 ```bash
 # 推荐：重建共享镜像并自动 doctor 验收
-bash scripts/rebuild-shared-image.sh zhang-zhen --no-cache
+bash scripts/rebuild-shared-image.sh common-writer --no-cache
 
 # 或：统一构建入口（构建后同样自动 doctor，失败则 exit 1）
 bash scripts/build-image.sh

@@ -4,7 +4,7 @@
 #
 # 用法：
 #   bash scripts/patch-config-runtime.sh <profile>
-#   bash scripts/patch-config-runtime.sh zhang-zhen
+#   bash scripts/patch-config-runtime.sh common-writer
 
 set -euo pipefail
 
