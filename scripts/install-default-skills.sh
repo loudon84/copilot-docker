@@ -4,7 +4,12 @@ set -euo pipefail
 PROFILE="${1:?usage: install-default-skills.sh <profile>}"
 CONTAINER="hermes-${PROFILE}"
 
-docker exec -u root -it "$CONTAINER" bash -lc '
+if ! docker ps --format '{{.Names}}' | grep -qx "$CONTAINER"; then
+  echo "ERROR: container not running: $CONTAINER"
+  exit 1
+fi
+
+docker exec -u root -i "$CONTAINER" bash <<'EOS'
 set -euo pipefail
 
 SRC=""
@@ -57,3 +62,4 @@ find "$DST" -type f -exec chmod 640 {} \;
 
 echo "OK: default bundled skills installed"
 find "$DST" -name SKILL.md | wc -l
+EOS
