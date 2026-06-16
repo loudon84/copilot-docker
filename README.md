@@ -48,6 +48,16 @@ bash scripts/build-image.sh writer --no-cache
 docker run --rm hermes-agent-webui:latest /usr/local/bin/verify-mirrors.sh
 ```
 
+## Hermes Agent API Server
+
+每个实例同时暴露 WebUI（8787）与 Agent API（8642 → 宿主机 `HERMES_GATEWAY_PORT`）。详见 [docs/agent-api-server.md](docs/agent-api-server.md)。
+
+```bash
+bash scripts/create-instance.sh writer 8787 writer
+bash scripts/up-instance.sh writer
+bash scripts/check-agent-api.sh writer
+```
+
 ## 专家注入
 
 ```bash

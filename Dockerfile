@@ -217,9 +217,20 @@ RUN mkdir -p /data/hermes /workspace /uv_cache /app /opt/bun /opt/gbrain \
       /opt/bun \
       /opt/gbrain
 
+COPY docker/entrypoint.sh /entrypoint.sh
+COPY docker/healthcheck.sh /usr/local/bin/hermes-healthcheck.sh
+COPY docker/sync-runtime-env.sh /usr/local/bin/sync-runtime-env.sh
+COPY scripts/lib/sync_runtime_env.py /usr/local/bin/sync_runtime_env.py
+RUN chmod 555 /entrypoint.sh \
+  && chmod 555 /usr/local/bin/hermes-healthcheck.sh \
+  && chmod 555 /usr/local/bin/sync-runtime-env.sh \
+  && chmod 555 /usr/local/bin/sync_runtime_env.py
 
 USER hermeswebui
 
-EXPOSE 8787
+EXPOSE 8787 8642
 
-CMD ["/hermeswebui_init.bash"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=5 \
+  CMD /usr/local/bin/hermes-healthcheck.sh
+
+CMD ["/entrypoint.sh"]

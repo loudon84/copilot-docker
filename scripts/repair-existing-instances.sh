@@ -21,6 +21,7 @@ for DATA_DIR in "$INSTANCES_ROOT"/*/data/hermes; do
   if [ -f "$ENV_FILE" ]; then
     grep -q '^GBRAIN_REF=' "$ENV_FILE" || echo 'GBRAIN_REF=master' >> "$ENV_FILE"
     grep -q '^BUN_VERSION=' "$ENV_FILE" || echo 'BUN_VERSION=bun-v1.2.15' >> "$ENV_FILE"
+    bash "$BASE_DIR/scripts/migrate-instance-env.sh" "$PROFILE" 2>/dev/null || true
   fi
 
   for d in "${REQUIRED_DIRS[@]}"; do

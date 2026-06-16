@@ -63,6 +63,7 @@ mkdir -p \
 
 if [ ! -f "$INSTANCE_DIR/.env" ]; then
   PASS="$(openssl rand -base64 32 | tr -d '/+=' | cut -c1-24)"
+  API_KEY="$(openssl rand -base64 48 | tr -d '/+=' | cut -c1-40)"
   cat > "$INSTANCE_DIR/.env" <<EOF_ENV
 UID=1000
 GID=1000
@@ -101,6 +102,14 @@ NPM_REGISTRY=https://registry.npmmirror.com
 PYTHON_BASE_IMAGE=python:3.12-slim-bookworm
 BUILD_APT_PROXY=
 
+API_SERVER_ENABLED=true
+API_SERVER_KEY=$API_KEY
+API_SERVER_HOST=0.0.0.0
+API_SERVER_PORT=8642
+API_SERVER_MODEL_NAME=$PROFILE
+API_SERVER_CORS_ORIGINS=
+GATEWAY_ALLOW_ALL_USERS=true
+
 EOF_ENV
   chmod 600 "$INSTANCE_DIR/.env"
 fi
@@ -110,10 +119,31 @@ chmod -R u+rwX,g+rwX "$DATA_DIR" 2>/dev/null || true
 chmod 600 "$INSTANCE_DIR/.env" 2>/dev/null || true
 
 bash "$BASE_DIR/scripts/inject-expert.sh" "$PROFILE" "$EXPERT"
+bash "$BASE_DIR/scripts/sync-runtime-env.sh" "$PROFILE"
+
+# 生成 nodeskclaw 连接信息（不含 API key 明文）
+cat > "$INSTANCE_DIR/agent-api.json" <<EOF_JSON
+{
+  "profile": "$PROFILE",
+  "base_url": "http://127.0.0.1:$GATEWAY_PORT",
+  "openai_base_url": "http://127.0.0.1:$GATEWAY_PORT/v1",
+  "health_url": "http://127.0.0.1:$GATEWAY_PORT/health",
+  "models_url": "http://127.0.0.1:$GATEWAY_PORT/v1/models",
+  "skills_url": "http://127.0.0.1:$GATEWAY_PORT/v1/skills",
+  "toolsets_url": "http://127.0.0.1:$GATEWAY_PORT/v1/toolsets",
+  "api_key_env": "API_SERVER_KEY",
+  "container_name": "hermes-$PROFILE",
+  "webui_url": "http://127.0.0.1:$PORT"
+}
+EOF_JSON
 
 echo "Instance created: $PROFILE"
-echo "WebUI: http://<server-ip>:$PORT"
-echo "Gateway: http://<server-ip>:$GATEWAY_PORT (nodeskclaw / 外部 Agent 接入)"
+echo "WebUI: http://127.0.0.1:$PORT"
+echo "Agent API: http://127.0.0.1:$GATEWAY_PORT"
+echo "Agent API Key: (see $INSTANCE_DIR/.env → API_SERVER_KEY)"
+echo "Health: curl http://127.0.0.1:$GATEWAY_PORT/health"
+echo "Models: curl -H \"Authorization: Bearer <API_SERVER_KEY>\" http://127.0.0.1:$GATEWAY_PORT/v1/models"
+echo "Verify: bash scripts/check-agent-api.sh $PROFILE"
 echo "Password: $(grep HERMES_WEBUI_PASSWORD "$INSTANCE_DIR/.env" | cut -d= -f2-)"
 echo "Env file: $INSTANCE_DIR/.env"
 echo "Hint: 镜像全实例共享；若尚未 build，先执行 bash scripts/build-image.sh，再 bash scripts/up-instance.sh $PROFILE"

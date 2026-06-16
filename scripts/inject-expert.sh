@@ -71,4 +71,5 @@ mkdir -p \
   "$DATA_DIR/obsidian-vault/90-Archive" \
   "$DATA_DIR/sessions" "$DATA_DIR/logs" "$DATA_DIR/webui"
 chmod 600 "$DATA_DIR/.env" 2>/dev/null || true
+bash "$BASE_DIR/scripts/sync-runtime-env.sh" "$PROFILE" 2>/dev/null || true
 echo "Injected expert '$EXPERT' into instance '$PROFILE'"

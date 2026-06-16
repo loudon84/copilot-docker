@@ -25,6 +25,12 @@ done
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV_FILE="$BASE_DIR/instances/$PROFILE/.env"
 [ -f "$ENV_FILE" ] || { echo "ERROR: missing env file: $ENV_FILE"; exit 1; }
+
+# 补齐已有实例缺失的 API Server 配置
+bash "$BASE_DIR/scripts/migrate-instance-env.sh" "$PROFILE"
+# 同步 runtime 变量到 data/hermes/.env（Hermes gateway 实际读取此文件）
+bash "$BASE_DIR/scripts/sync-runtime-env.sh" "$PROFILE"
+
 cd "$BASE_DIR"
 
 DATA_DIR="$BASE_DIR/instances/$PROFILE/data/hermes"
@@ -82,14 +88,15 @@ docker inspect "hermes-$PROFILE" >/dev/null 2>&1
 docker logs --tail=80 "hermes-$PROFILE" >/dev/null 2>&1 || true
 
 echo "OK: started hermes-$PROFILE"
-echo "WebUI: http://<server-ip>:$(grep '^HERMES_WEBUI_PORT=' "$ENV_FILE" | cut -d= -f2-)"
+WEBUI_PORT="$(grep '^HERMES_WEBUI_PORT=' "$ENV_FILE" | cut -d= -f2-)"
+echo "WebUI: http://127.0.0.1:${WEBUI_PORT}"
 GATEWAY_PORT="$(grep '^HERMES_GATEWAY_PORT=' "$ENV_FILE" | cut -d= -f2-)"
 if [ -z "$GATEWAY_PORT" ]; then
   BASE_PORT="$(grep '^HERMES_BASE_PORT=' "$ENV_FILE" | cut -d= -f2-)"
-  WEBUI_PORT="$(grep '^HERMES_WEBUI_PORT=' "$ENV_FILE" | cut -d= -f2-)"
   BASE_PORT="${BASE_PORT:-20000}"
   WEBUI_PORT="${WEBUI_PORT:-8787}"
   GATEWAY_PORT=$((BASE_PORT + WEBUI_PORT))
 fi
-echo "Gateway: http://<server-ip>:${GATEWAY_PORT} (nodeskclaw / 外部 Agent 接入)"
+echo "Agent API: http://127.0.0.1:${GATEWAY_PORT}"
+echo "Verify: bash scripts/check-agent-api.sh $PROFILE"
 echo "Password: $(grep '^HERMES_WEBUI_PASSWORD=' "$ENV_FILE" | cut -d= -f2-)"
