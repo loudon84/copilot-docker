@@ -1,10 +1,11 @@
 # Hermes WebUI + Agent 从 git.superic.com 构建（见 docker-compose.yml）
 
+ARG PYTHON_BASE_IMAGE=python:3.12-slim-bookworm
 ARG HERMES_WEBUI_REPO=http://git.superic.com/aiplatform/hermes-webui.git
 ARG HERMES_WEBUI_REF=master
 
 # ── Stage 1: clone hermes-webui ──────────────────────────────────────────────
-FROM python:3.12-slim AS webui-clone
+FROM ${PYTHON_BASE_IMAGE} AS webui-clone
 ARG HERMES_WEBUI_REPO
 ARG HERMES_WEBUI_REF
 
@@ -13,18 +14,24 @@ ARG APT_MIRROR=https://mirrors.aliyun.com/debian
 ARG PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/
 ARG NPM_REGISTRY=https://registry.npmmirror.com
 
+ENV USE_CN_MIRRORS=${USE_CN_MIRRORS}
+ENV APT_MIRROR=${APT_MIRROR}
 ENV PIP_INDEX_URL=${PIP_INDEX_URL}
 ENV PIP_TRUSTED_HOST=mirrors.aliyun.com
 ENV NPM_CONFIG_REGISTRY=${NPM_REGISTRY}
 ENV UV_DEFAULT_INDEX=${PIP_INDEX_URL}
 
-RUN apt-get update \
+COPY docker/apt-mirror.sh /usr/local/bin/apt-mirror.sh
+
+RUN chmod +x /usr/local/bin/apt-mirror.sh \
+  && /usr/local/bin/apt-mirror.sh \
+  && apt-get update \
   && apt-get install -y --no-install-recommends git ca-certificates \
   && rm -rf /var/lib/apt/lists/* \
   && git clone --depth=1 --branch "${HERMES_WEBUI_REF}" "${HERMES_WEBUI_REPO}" /src
 
 # ── Stage 2: hermes-webui 基础镜像（对齐官方 Dockerfile 结构）────────────────
-FROM python:3.12-slim AS hermes-webui-base
+FROM ${PYTHON_BASE_IMAGE} AS hermes-webui-base
 
 LABEL maintainer="superic"
 LABEL description="Hermes WebUI — built from Git source"
@@ -32,9 +39,25 @@ LABEL description="Hermes WebUI — built from Git source"
 ENV DEBIAN_FRONTEND=noninteractive
 
 ARG BUILD_APT_PROXY=
-RUN if [ "A${BUILD_APT_PROXY:-}" != "A" ]; then \
-      printf 'Acquire::http::Proxy "%s";\n' "$BUILD_APT_PROXY" > /etc/apt/apt.conf.d/01proxy; \
-    fi \
+ARG USE_CN_MIRRORS=1
+ARG APT_MIRROR=https://mirrors.aliyun.com/debian
+ARG PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/
+ARG NPM_REGISTRY=https://registry.npmmirror.com
+
+ENV USE_CN_MIRRORS=${USE_CN_MIRRORS}
+ENV APT_MIRROR=${APT_MIRROR}
+ENV PIP_INDEX_URL=${PIP_INDEX_URL}
+ENV PIP_TRUSTED_HOST=mirrors.aliyun.com
+ENV NPM_CONFIG_REGISTRY=${NPM_REGISTRY}
+ENV UV_DEFAULT_INDEX=${PIP_INDEX_URL}
+
+COPY docker/apt-mirror.sh /usr/local/bin/apt-mirror.sh
+
+RUN chmod +x /usr/local/bin/apt-mirror.sh \
+  && if [ "A${BUILD_APT_PROXY:-}" != "A" ]; then \
+       printf 'Acquire::http::Proxy "%s";\n' "$BUILD_APT_PROXY" > /etc/apt/apt.conf.d/01proxy; \
+     fi \
+  && /usr/local/bin/apt-mirror.sh \
   && apt-get update \
   && apt-get install -y --no-install-recommends \
     ca-certificates wget gnupg \
@@ -97,10 +120,19 @@ FROM hermes-webui-base
 USER root
 ENV DEBIAN_FRONTEND=noninteractive
 
+ARG PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/
+ARG NPM_REGISTRY=https://registry.npmmirror.com
+
+ENV PIP_INDEX_URL=${PIP_INDEX_URL}
+ENV PIP_TRUSTED_HOST=mirrors.aliyun.com
+ENV UV_DEFAULT_INDEX=${PIP_INDEX_URL}
+ENV NPM_CONFIG_REGISTRY=${NPM_REGISTRY}
+
+COPY docker/verify-mirrors.sh /usr/local/bin/verify-mirrors.sh
+RUN chmod +x /usr/local/bin/verify-mirrors.sh
+
 ARG HERMES_AGENT_REPO=http://git.superic.com/aiplatform/hermes-agent.git
 ARG HERMES_AGENT_REF=master
-#RUN git clone --depth=1 --branch "${HERMES_AGENT_REF}" "${HERMES_AGENT_REPO}" /opt/hermes-agent \
-#  && chmod -R a+rX /opt/hermes-agent
 
 RUN git clone --depth=1 --branch "${HERMES_AGENT_REF}" "${HERMES_AGENT_REPO}" /opt/hermes-agent \
   && mkdir -p /home/hermeswebui/.hermes \
@@ -111,9 +143,9 @@ RUN git clone --depth=1 --branch "${HERMES_AGENT_REF}" "${HERMES_AGENT_REPO}" /o
   && chown -R hermeswebui:hermeswebui /opt/hermes-agent
 
 # Install hermes-agent into the same Python venv used by hermes-webui.
-# WebUI uses /app/venv/bin/python; adding /opt/hermes-agent to sys.path is not enough
-# because AIAgent is imported from the installed/editable project metadata.
-RUN python3 -m venv /app/venv \
+RUN echo "PIP_INDEX_URL=${PIP_INDEX_URL}" \
+  && echo "UV_DEFAULT_INDEX=${UV_DEFAULT_INDEX}" \
+  && python3 -m venv /app/venv \
   && /app/venv/bin/python -m pip install --upgrade pip setuptools wheel \
   && cd /opt/hermes-agent \
   && (/app/venv/bin/python -m pip install -e ".[all]" || /app/venv/bin/python -m pip install -e .) \
@@ -141,10 +173,11 @@ RUN chmod +x /usr/local/bin/install-gbrain.sh \
      /usr/local/bin/install-gbrain.sh
 
 ARG INSTALL_FILESYSTEM_MCP=1
-RUN if [ "${INSTALL_FILESYSTEM_MCP}" = "1" ]; then \
-      npm install -g @modelcontextprotocol/server-filesystem \
-      || echo "WARN: filesystem MCP global install failed; npx fallback may still work."; \
-    fi
+RUN echo "NPM registry=$(npm config get registry)" \
+  && if [ "${INSTALL_FILESYSTEM_MCP}" = "1" ]; then \
+       npm install -g @modelcontextprotocol/server-filesystem \
+       || echo "WARN: filesystem MCP global install failed; npx fallback may still work."; \
+     fi
 
 ARG INSTALL_CLAWSEC=0
 ARG CLAWSEC_REPO=http://git.superic.com/aiplatform/clawsec.git

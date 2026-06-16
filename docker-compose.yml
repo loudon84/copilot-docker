@@ -12,6 +12,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
+        PYTHON_BASE_IMAGE: ${PYTHON_BASE_IMAGE:-python:3.12-slim-bookworm}
         HERMES_WEBUI_REPO: ${HERMES_WEBUI_REPO:-http://git.superic.com/aiplatform/hermes-webui.git}
         HERMES_WEBUI_REF: ${HERMES_WEBUI_REF:-master}
         HERMES_AGENT_REPO: ${HERMES_AGENT_REPO:-http://git.superic.com/aiplatform/hermes-agent.git}
@@ -28,6 +29,7 @@ services:
         APT_MIRROR: ${APT_MIRROR:-https://mirrors.aliyun.com/debian}
         PIP_INDEX_URL: ${PIP_INDEX_URL:-https://mirrors.aliyun.com/pypi/simple/}
         NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmmirror.com}
+        BUILD_APT_PROXY: ${BUILD_APT_PROXY:-}
     image: ${LOCAL_IMAGE_NAME:-hermes-agent-webui:latest}
     container_name: hermes-${HERMES_PROFILE:-default}
     restart: unless-stopped

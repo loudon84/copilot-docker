@@ -39,6 +39,15 @@ cat instances/writer/.env | grep HERMES_WEBUI_PASSWORD
 cat instances/finance/.env | grep HERMES_WEBUI_PASSWORD
 ```
 
+## 镜像构建与国内镜像源
+
+构建参数（apt / pip / npm 镜像）在 `instances/<profile>/.env` 中配置，详见 [docs/build-image.md](docs/build-image.md)。
+
+```bash
+bash scripts/build-image.sh writer --no-cache
+docker run --rm hermes-agent-webui:latest /usr/local/bin/verify-mirrors.sh
+```
+
 ## 专家注入
 
 ```bash

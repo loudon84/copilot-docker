@@ -98,6 +98,8 @@ USE_CN_MIRRORS=1
 APT_MIRROR=https://mirrors.aliyun.com/debian
 PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/
 NPM_REGISTRY=https://registry.npmmirror.com
+PYTHON_BASE_IMAGE=python:3.12-slim-bookworm
+BUILD_APT_PROXY=
 
 EOF_ENV
   chmod 600 "$INSTANCE_DIR/.env"
