@@ -183,12 +183,12 @@ bash scripts/doctor-image.sh "$LOCAL_IMAGE_NAME"
 ## 验收（PRD §21，Linux 构建机）
 
 ```bash
-bash scripts/rebuild-shared-image.sh zhang-zhen --no-cache
+bash scripts/rebuild-shared-image.sh common-writer --no-cache
 bash scripts/doctor-image.sh hermes-agent-webui:latest
 bash scripts/recreate-all-instances.sh
 
-docker exec hermes-zhang-zhen bash -lc 'which gbrain; gbrain --help 2>&1 | head -80'
-docker logs --tail=200 hermes-zhang-zhen | grep -i "missing executable\|gbrain: command not found" && exit 1 || echo OK
+docker exec hermes-common-writer bash -lc 'which gbrain; gbrain --help 2>&1 | head -80'
+docker logs --tail=200 hermes-common-writer | grep -i "missing executable\|gbrain: command not found" && exit 1 || echo OK
 ```
 
 **通过标准：**

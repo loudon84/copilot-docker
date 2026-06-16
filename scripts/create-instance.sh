@@ -5,6 +5,20 @@ PROFILE="${1:?usage: create-instance.sh <profile> <webui_port> <expert>}"
 PORT="${2:?usage: create-instance.sh <profile> <webui_port> <expert>}"
 EXPERT="${3:?usage: create-instance.sh <profile> <webui_port> <expert>}"
 
+HERMES_BASE_PORT=20000
+
+if ! [[ "$PORT" =~ ^[1-9][0-9]{3}$ ]]; then
+  echo "ERROR: webui_port must be a 4-digit number (1000-9999), got: $PORT" >&2
+  exit 1
+fi
+
+GATEWAY_PORT=$((HERMES_BASE_PORT + PORT))
+
+if [ "$GATEWAY_PORT" -gt 65535 ]; then
+  echo "ERROR: gateway port overflow: $GATEWAY_PORT (HERMES_BASE_PORT=$HERMES_BASE_PORT + webui_port=$PORT)" >&2
+  exit 1
+fi
+
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 INSTANCE_DIR="$BASE_DIR/instances/$PROFILE"
 DATA_DIR="$INSTANCE_DIR/data/hermes"
@@ -60,6 +74,9 @@ HERMES_VERSION=git-build
 LOCAL_IMAGE_NAME=hermes-agent-webui:latest
 HERMES_WEBUI_BIND=0.0.0.0
 HERMES_WEBUI_PORT=$PORT
+HERMES_BASE_PORT=$HERMES_BASE_PORT
+HERMES_GATEWAY_BIND=0.0.0.0
+HERMES_GATEWAY_PORT=$GATEWAY_PORT
 HERMES_WEBUI_PASSWORD=$PASS
 HERMES_PROFILE=$PROFILE
 HERMES_EXPERT=$EXPERT
@@ -94,6 +111,7 @@ bash "$BASE_DIR/scripts/inject-expert.sh" "$PROFILE" "$EXPERT"
 
 echo "Instance created: $PROFILE"
 echo "WebUI: http://<server-ip>:$PORT"
+echo "Gateway: http://<server-ip>:$GATEWAY_PORT (nodeskclaw / 外部 Agent 接入)"
 echo "Password: $(grep HERMES_WEBUI_PASSWORD "$INSTANCE_DIR/.env" | cut -d= -f2-)"
 echo "Env file: $INSTANCE_DIR/.env"
 echo "Hint: 镜像全实例共享；若尚未 build，先执行 bash scripts/build-image.sh，再 bash scripts/up-instance.sh $PROFILE"

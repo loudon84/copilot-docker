@@ -83,4 +83,13 @@ docker logs --tail=80 "hermes-$PROFILE" >/dev/null 2>&1 || true
 
 echo "OK: started hermes-$PROFILE"
 echo "WebUI: http://<server-ip>:$(grep '^HERMES_WEBUI_PORT=' "$ENV_FILE" | cut -d= -f2-)"
+GATEWAY_PORT="$(grep '^HERMES_GATEWAY_PORT=' "$ENV_FILE" | cut -d= -f2-)"
+if [ -z "$GATEWAY_PORT" ]; then
+  BASE_PORT="$(grep '^HERMES_BASE_PORT=' "$ENV_FILE" | cut -d= -f2-)"
+  WEBUI_PORT="$(grep '^HERMES_WEBUI_PORT=' "$ENV_FILE" | cut -d= -f2-)"
+  BASE_PORT="${BASE_PORT:-20000}"
+  WEBUI_PORT="${WEBUI_PORT:-8787}"
+  GATEWAY_PORT=$((BASE_PORT + WEBUI_PORT))
+fi
+echo "Gateway: http://<server-ip>:${GATEWAY_PORT} (nodeskclaw / 外部 Agent 接入)"
 echo "Password: $(grep '^HERMES_WEBUI_PASSWORD=' "$ENV_FILE" | cut -d= -f2-)"
