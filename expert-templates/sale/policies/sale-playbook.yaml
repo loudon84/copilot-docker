@@ -1,0 +1,129 @@
+version: "1.7"
+expert: sale
+
+principles:
+  - evidence_first
+  - customer_language_over_marketing_language
+  - no_fabricated_commitments
+  - discovery_before_pitch
+  - risk_flags_must_be_explicit
+  - human_review_for_customer_facing_outputs
+
+sensitive_commitments:
+  require_human_or_system_confirmation:
+    - price
+    - stock
+    - delivery_date
+    - payment_terms
+    - credit_limit
+    - legal_terms
+    - exclusive_distribution
+    - product_equivalence
+    - quality_guarantee
+    - warranty_terms
+
+frameworks:
+  discovery:
+    spin:
+      situation: "Use sparingly; do not ask what can be researched."
+      problem: "Surface dissatisfaction and process breakdown."
+      implication: "Quantify downstream business impact."
+      need_payoff: "Let the buyer articulate the value."
+    gap_selling:
+      current_state:
+        - environment
+        - problems
+        - impact
+        - root_cause
+      future_state:
+        - desired_outcome
+        - metrics
+        - timeline
+      gap:
+        - cost_of_inaction
+        - urgency
+        - why_now
+    sandler_pain_funnel:
+      levels:
+        - surface_pain
+        - business_impact
+        - personal_or_team_stakes
+
+  deal_strategy:
+    meddpicc:
+      - metrics
+      - economic_buyer
+      - decision_criteria
+      - decision_process
+      - paper_process
+      - identify_pain
+      - champion
+      - competition
+    verdicts:
+      - qualify
+      - advance
+      - intervene
+      - nurture
+      - disqualify
+
+  outbound:
+    signal_tiers:
+      tier_1_active_buying:
+        - direct_intent
+        - rfp
+        - vendor_evaluation
+      tier_2_org_change:
+        - leadership_change
+        - funding
+        - hiring_surge
+        - m_and_a
+      tier_3_behavioral:
+        - tech_stack_change
+        - event_activity
+        - content_engagement
+    channels:
+      - email
+      - phone
+      - linkedin
+      - warm_intro
+      - event_followup
+
+  proposal:
+    win_theme_rules:
+      - specific_to_buyer
+      - maps_capability_to_outcome
+      - evidence_backed
+      - differentiates_without_attacking_competitors
+    proposal_arc:
+      - buyer_challenge
+      - solution_journey
+      - transformed_state
+
+  account_management:
+    stakeholder_roles:
+      - champion
+      - economic_buyer
+      - decision_maker
+      - influencer
+      - end_user
+      - detractor
+      - procurement
+      - technical_evaluator
+    health_colors:
+      green: "Expansion possible."
+      yellow: "Stabilize before expansion."
+      red: "Do not expand; save plan required."
+
+outputs:
+  customer_facing:
+    must_label_as_draft: true
+    require_review_before_send: true
+
+  default_paths:
+    materials: /data/hermes/workspace/materials/sale
+    references: /data/hermes/workspace/references/sale
+    drafts: /data/hermes/workspace/drafts/sale
+    reports: /data/hermes/workspace/reports/sale
+    exports: /data/hermes/workspace/exports/sale
+    artifacts: /data/hermes/workspace/artifacts/sale
+    obsidian_archive: /data/hermes/obsidian-vault/60-Reports/Sales

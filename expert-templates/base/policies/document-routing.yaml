@@ -1,7 +1,7 @@
-# Document routing policy — Hermes container instances (v1.6)
+# Document routing policy — Hermes container instances (v1.7)
 # Profile: __PROFILE__  Expert: __EXPERT__
 
-version: "1.6"
+version: "1.7"
 
 directories:
   workspace:
@@ -125,6 +125,17 @@ expert_defaults:
     exports: /data/hermes/workspace/exports/finance
     obsidian_reports: /data/hermes/obsidian-vault/60-Reports
     forbid_sensitive_in_obsidian: true
+
+  sale:
+    materials: /data/hermes/workspace/materials/sale
+    references: /data/hermes/workspace/references/sale
+    drafts: /data/hermes/workspace/drafts/sale
+    reports: /data/hermes/workspace/reports/sale
+    exports: /data/hermes/workspace/exports/sale
+    artifacts: /data/hermes/workspace/artifacts/sale
+    obsidian_sales_reports: /data/hermes/obsidian-vault/60-Reports/Sales
+    forbid_raw_customer_files_in_obsidian: true
+    customer_facing_outputs_require_review: true
 
 # 多文件输出 manifest 建议路径
 manifest:

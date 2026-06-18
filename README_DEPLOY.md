@@ -34,6 +34,7 @@ expert-templates/
   default/
   writer/
   finance/
+  sale/
 ```
 
 ## 2. 路径规则
@@ -374,6 +375,30 @@ bash scripts/bootstrap-self-evolution-stack.sh finance
 ```text
 http://<server-ip>:9602
 ```
+
+## 10.1 新增 sale 实例
+
+```bash
+bash scripts/create-sale-instance.sh sale 9603
+# 或分步：
+bash scripts/create-instance.sh sale 9603 sale
+bash scripts/inject-expert.sh sale sale
+bash scripts/up-instance.sh sale
+```
+
+访问：
+
+```text
+http://<server-ip>:9603
+```
+
+专家注入后检查：
+
+```bash
+bash scripts/check-sale-expert.sh sale
+```
+
+详见 [docs/sale-expert.md](docs/sale-expert.md)。
 
 ## 11. 停止实例
 

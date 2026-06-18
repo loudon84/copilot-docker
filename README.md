@@ -23,6 +23,8 @@ bash scripts/create-instance.sh writer 8787 writer
 bash scripts/up-instance.sh writer
 bash scripts/create-instance.sh finance 8788 finance
 bash scripts/up-instance.sh finance
+bash scripts/create-instance.sh sale 9602 sale
+bash scripts/up-instance.sh sale
 ```
 
 访问：
@@ -30,6 +32,7 @@ bash scripts/up-instance.sh finance
 ```text
 http://服务器IP:8787  # writer
 http://服务器IP:8788  # finance
+http://服务器IP:9602  # sale
 ```
 
 查看密码：
@@ -63,8 +66,10 @@ bash scripts/check-agent-api.sh writer
 ```bash
 bash scripts/inject-expert.sh writer writer
 bash scripts/inject-expert.sh finance finance
+bash scripts/inject-expert.sh sale sale
 bash scripts/restart-instance.sh writer
 bash scripts/restart-instance.sh finance
+bash scripts/restart-instance.sh sale
 ```
 
 ## 推送到火山引擎（nodeskclaw）

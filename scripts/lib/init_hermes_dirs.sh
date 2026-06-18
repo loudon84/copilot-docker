@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 统一创建 /data/hermes 标准目录结构（PRD v1.6 document-routing）
+# 统一创建 /data/hermes 标准目录结构（PRD v1.7 document-routing）
 #
 # 用法:
 #   source scripts/lib/init_hermes_dirs.sh
@@ -28,6 +28,13 @@ init_hermes_dirs() {
     "$DATA_DIR/obsidian-vault/40-Skills" \
     "$DATA_DIR/obsidian-vault/50-Memory" \
     "$DATA_DIR/obsidian-vault/60-Reports" \
+    "$DATA_DIR/obsidian-vault/60-Reports/Sales" \
+    "$DATA_DIR/workspace/materials/sale" \
+    "$DATA_DIR/workspace/references/sale" \
+    "$DATA_DIR/workspace/drafts/sale" \
+    "$DATA_DIR/workspace/reports/sale" \
+    "$DATA_DIR/workspace/exports/sale" \
+    "$DATA_DIR/workspace/artifacts/sale" \
     "$DATA_DIR/obsidian-vault/70-Brain" \
     "$DATA_DIR/obsidian-vault/80-Product-Spec" \
     "$DATA_DIR/obsidian-vault/90-Archive" \
