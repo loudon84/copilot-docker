@@ -31,8 +31,6 @@ if [ ! -f "$INSTANCE_DIR/.env" ]; then
   PASS="$(openssl rand -base64 32 | tr -d '/+=' | cut -c1-24)"
   API_KEY="$(openssl rand -base64 48 | tr -d '/+=' | cut -c1-40)"
   cat > "$INSTANCE_DIR/.env" <<EOF_ENV
-UID=1000
-GID=1000
 HERMES_WEBUI_REPO=http://git.superic.com/aiplatform/hermes-webui.git
 HERMES_WEBUI_REF=master
 HERMES_AGENT_REPO=http://git.superic.com/aiplatform/hermes-agent.git
