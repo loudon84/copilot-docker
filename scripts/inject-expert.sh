@@ -49,27 +49,9 @@ done
 
 bash "$BASE_DIR/scripts/patch-config-runtime.sh" "$PROFILE"
 
-mkdir -p \
-  "$DATA_DIR/skills" \
-  "$DATA_DIR/tools" \
-  "$DATA_DIR/plugins" \
-  "$DATA_DIR/mcp" \
-  "$DATA_DIR/policies" \
-  "$DATA_DIR/skill-bundles" \
-  "$DATA_DIR/gbrain" \
-  "$DATA_DIR/workspace/materials" \
-  "$DATA_DIR/workspace/references" \
-  "$DATA_DIR/workspace/drafts" \
-  "$DATA_DIR/workspace/exports" \
-  "$DATA_DIR/obsidian-vault/00-Inbox" \
-  "$DATA_DIR/obsidian-vault/10-Articles" \
-  "$DATA_DIR/obsidian-vault/20-Research" \
-  "$DATA_DIR/obsidian-vault/30-Templates" \
-  "$DATA_DIR/obsidian-vault/40-Content-Calendar" \
-  "$DATA_DIR/obsidian-vault/50-Policies" \
-  "$DATA_DIR/obsidian-vault/60-Reports" \
-  "$DATA_DIR/obsidian-vault/90-Archive" \
-  "$DATA_DIR/sessions" "$DATA_DIR/logs" "$DATA_DIR/webui"
+# shellcheck source=lib/init_hermes_dirs.sh
+source "$BASE_DIR/scripts/lib/init_hermes_dirs.sh"
+init_hermes_dirs "$DATA_DIR"
 chmod 600 "$DATA_DIR/.env" 2>/dev/null || true
 bash "$BASE_DIR/scripts/sync-runtime-env.sh" "$PROFILE" 2>/dev/null || true
 echo "Injected expert '$EXPERT' into instance '$PROFILE'"

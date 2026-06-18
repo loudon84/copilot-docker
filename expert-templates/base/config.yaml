@@ -12,6 +12,16 @@ memory:
   bank_id: hermes-__PROFILE__
 
 mcp_servers:
+  workspace:
+    command: "npx"
+    args:
+      - "-y"
+      - "@modelcontextprotocol/server-filesystem"
+      - "/data/hermes/workspace"
+    enabled: true
+    tools:
+      resources: true
+      prompts: false
   obsidian_vault:
     command: "npx"
     args:

@@ -1,0 +1,136 @@
+# Document routing policy — Hermes container instances (v1.6)
+# Profile: __PROFILE__  Expert: __EXPERT__
+
+version: "1.6"
+
+directories:
+  workspace:
+    root: /data/hermes/workspace
+    purpose: 工作过程文件、临时处理、草稿、脚本、最终导出
+    subdirs:
+      materials: 原始上传与外部下载资料
+      references: 从 PDF/网页/Excel/邮件/接口抽取的引用材料
+      drafts: 未定稿 Markdown、文本、提纲、方案草稿
+      reports: 未审核的中间 Markdown 报告
+      exports: 面向用户交付的最终文档
+      artifacts: HTML UI、图表 JSON、Mermaid、可视化中间产物
+      scripts: Agent 生成的可执行辅助脚本
+      runtime: 运行态文件（run log、job state、pipeline state）
+      tmp: 临时文件、cache、转换中间件
+
+  obsidian_vault:
+    root: /data/hermes/obsidian-vault
+    purpose: 长期可阅读、可检索、可沉淀的 Markdown 知识
+    subdirs:
+      "00-Inbox": 待整理收件箱
+      "10-Articles": 文章
+      "20-Research": 研究笔记
+      "30-Templates": 模板
+      "40-Skills": 技能说明文档
+      "50-Memory": 记忆索引
+      "60-Reports": 审核后可归档的报告
+      "70-Brain": 脑图与知识图谱
+      "80-Product-Spec": IC 产品规格书等长期知识
+      "90-Archive": 归档
+
+  skills:
+    root: /data/hermes/skills
+    purpose: Hermes skill 能力资产
+
+# 文件扩展名 → 默认目录
+extension_routes:
+  materials:
+    extensions: [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".eml", ".msg"]
+    target: /data/hermes/workspace/materials
+
+  references:
+    extensions: [".txt"]
+    target: /data/hermes/workspace/references
+    note: 抽取后的引用摘要、OCR 文本
+
+  drafts:
+    extensions: [".md"]
+    target: /data/hermes/workspace/drafts
+    note: 未定稿时使用；已定稿知识见 obsidian_archive
+
+  reports:
+    extensions: [".md"]
+    target: /data/hermes/workspace/reports
+    note: 未审核技术文章、评测报告
+
+  final_exports:
+    extensions: [".docx", ".pdf", ".xlsx", ".pptx", ".html"]
+    target: /data/hermes/workspace/exports
+
+  artifacts:
+    extensions: [".html", ".svg", ".json", ".mmd"]
+    target: /data/hermes/workspace/artifacts
+    note: 交互产物；.json 作为图表/配置 artifact 时使用
+
+  scripts:
+    extensions: [".py", ".sh", ".js", ".ts", ".mjs", ".cjs", ".ps1"]
+    target: /data/hermes/workspace/scripts
+
+  tmp:
+    extensions: [".tmp", ".cache"]
+    target: /data/hermes/workspace/tmp
+
+# Obsidian 写入限制
+obsidian:
+  forbidden_extensions:
+    - .py
+    - .sh
+    - .js
+    - .ts
+    - .mjs
+    - .cjs
+    - .ps1
+    - .exe
+    - .bin
+    - .zip
+    - .tar
+    - .gz
+    - .docx
+    - .pdf
+    - .xlsx
+    - .pptx
+    - .tmp
+    - .cache
+    - .log
+
+  allowed_extensions:
+    - .md
+    - .txt
+    - .yaml
+    - .yml
+    - .json
+    - .csv
+
+  allowed_json_csv_note: 仅作为知识索引、结构化摘要、参数表、引用清单；禁止运行态缓存
+
+# 专家类型默认子目录（在 workspace 根下追加）
+expert_defaults:
+  writer:
+    materials: /data/hermes/workspace/materials
+    drafts: /data/hermes/workspace/drafts
+    reports: /data/hermes/workspace/reports
+    exports: /data/hermes/workspace/exports
+    scripts: /data/hermes/workspace/scripts
+    obsidian_product_spec: /data/hermes/obsidian-vault/80-Product-Spec
+
+  finance:
+    materials: /data/hermes/workspace/materials/finance
+    drafts: /data/hermes/workspace/drafts/finance
+    reports: /data/hermes/workspace/reports/finance
+    exports: /data/hermes/workspace/exports/finance
+    obsidian_reports: /data/hermes/obsidian-vault/60-Reports
+    forbid_sensitive_in_obsidian: true
+
+# 多文件输出 manifest 建议路径
+manifest:
+  path_pattern: /data/hermes/workspace/artifacts/<task-name>.manifest.json
+  required_fields:
+    - task
+    - profile
+    - created_at
+    - files

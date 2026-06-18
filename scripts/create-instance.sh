@@ -23,43 +23,9 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 INSTANCE_DIR="$BASE_DIR/instances/$PROFILE"
 DATA_DIR="$INSTANCE_DIR/data/hermes"
 
-mkdir -p \
-  "$DATA_DIR" \
-  "$DATA_DIR/workspace" \
-  "$DATA_DIR/workspace/materials" \
-  "$DATA_DIR/workspace/references" \
-  "$DATA_DIR/workspace/drafts" \
-  "$DATA_DIR/workspace/exports" \
-  "$DATA_DIR/workspace/artifacts" \
-  "$DATA_DIR/obsidian-vault" \
-  "$DATA_DIR/obsidian-vault/00-Inbox" \
-  "$DATA_DIR/obsidian-vault/10-Articles" \
-  "$DATA_DIR/obsidian-vault/20-Research" \
-  "$DATA_DIR/obsidian-vault/30-Templates" \
-  "$DATA_DIR/obsidian-vault/40-Skills" \
-  "$DATA_DIR/obsidian-vault/50-Memory" \
-  "$DATA_DIR/obsidian-vault/60-Reports" \
-  "$DATA_DIR/obsidian-vault/70-Brain" \
-  "$DATA_DIR/obsidian-vault/80-Product-Spec" \
-  "$DATA_DIR/obsidian-vault/90-Archive" \
-  "$DATA_DIR/memories" \
-  "$DATA_DIR/skills" \
-  "$DATA_DIR/tools" \
-  "$DATA_DIR/plugins" \
-  "$DATA_DIR/hindsight" \
-  "$DATA_DIR/gbrain" \
-  "$DATA_DIR/evolution/runs" \
-  "$DATA_DIR/evolution/reports" \
-  "$DATA_DIR/skill-bundles" \
-  "$DATA_DIR/skill-inbox" \
-  "$DATA_DIR/attachments" \
-  "$DATA_DIR/policies" \
-  "$DATA_DIR/mcp" \
-  "$DATA_DIR/backups" \
-  "$DATA_DIR/logs" \
-  "$DATA_DIR/sessions" \
-  "$DATA_DIR/webui" \
-  "$DATA_DIR/webui/attachments"
+# shellcheck source=lib/init_hermes_dirs.sh
+source "$BASE_DIR/scripts/lib/init_hermes_dirs.sh"
+init_hermes_dirs "$DATA_DIR"
 
 if [ ! -f "$INSTANCE_DIR/.env" ]; then
   PASS="$(openssl rand -base64 32 | tr -d '/+=' | cut -c1-24)"

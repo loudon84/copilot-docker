@@ -565,6 +565,70 @@ Return:
 - exact file paths
 SKILL
 
+  mkdir -p /data/hermes/skills/system/document-output-router
+  cat > /data/hermes/skills/system/document-output-router/SKILL.md <<'SKILL'
+---
+name: document-output-router
+description: Classify and route every generated file to the correct Hermes workspace directory before writing. Use when creating scripts, drafts, exports, reports, materials, artifacts, or archiving knowledge to Obsidian.
+version: 1.0.0
+category: system
+---
+
+# Document Output Router
+
+Route all file outputs according to `/data/hermes/policies/document-routing.yaml` and `/data/hermes/workspace/AGENTS.md`.
+
+## Before writing any file
+
+1. Classify: material | reference | draft | report | final_export | artifact | script | tmp | runtime | knowledge | skill
+2. Pick target directory from the table below
+3. Never write scripts or binary exports to `obsidian-vault`
+
+## Routing table
+
+| Kind | Extensions / use | Target |
+|------|------------------|--------|
+| material | uploads, downloads | `/data/hermes/workspace/materials` |
+| reference | extracted summaries | `/data/hermes/workspace/references` |
+| draft | outlines, PRD drafts | `/data/hermes/workspace/drafts` |
+| report | unreviewed Markdown | `/data/hermes/workspace/reports` |
+| final_export | docx, pdf, xlsx, pptx | `/data/hermes/workspace/exports` |
+| artifact | html, svg, json charts | `/data/hermes/workspace/artifacts` |
+| script | py, sh, js, ts, ps1 | `/data/hermes/workspace/scripts` |
+| tmp | cache, intermediates | `/data/hermes/workspace/tmp` |
+| runtime | job state, run logs | `/data/hermes/workspace/runtime` |
+| knowledge | reviewed Markdown | `/data/hermes/obsidian-vault/<category>` |
+| skill | SKILL.md | `/data/hermes/skills/<category>/<name>` |
+
+## Multi-file manifest
+
+When outputting multiple files, write:
+
+`/data/hermes/workspace/artifacts/<task-name>.manifest.json`
+
+```json
+{
+  "task": "string",
+  "profile": "writer",
+  "created_at": "ISO8601",
+  "files": [
+    {
+      "path": "/data/hermes/workspace/exports/example.docx",
+      "kind": "final_export",
+      "format": "docx",
+      "purpose": "用户最终交付文档",
+      "source": [],
+      "obsidian_archive": false
+    }
+  ]
+}
+```
+
+## Reply format
+
+List every file with: path, type, purpose, final deliverable (yes/no), Obsidian archive (yes/no).
+SKILL
+
 else
   echo "[4/6] Skip Hermes-native local skills"
 fi
@@ -589,7 +653,7 @@ find /data/hermes/skills -mindepth 1 -maxdepth 1 -type d -printf "%f\n" | sort |
 
 echo
 echo "Key installed skills:"
-find /data/hermes/skills -path "*/SKILL.md" | grep -E 'skill-creator|create-skill|html-ui-artifact|web-artifacts|theme-factory|frontend|pptx|pdf|docx|xlsx|webapp-testing|mcp-builder|skill-audit' | sort || true
+find /data/hermes/skills -path "*/SKILL.md" | grep -E 'skill-creator|create-skill|html-ui-artifact|document-output-router|web-artifacts|theme-factory|frontend|pptx|pdf|docx|xlsx|webapp-testing|mcp-builder|skill-audit' | sort || true
 
 echo
 echo "OK: install-blound-skills finished"

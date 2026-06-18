@@ -48,6 +48,16 @@ def runtime_patch(
             "bank_id": bank_id,
         },
         "mcp_servers": {
+            "workspace": {
+                "command": "npx",
+                "args": [
+                    "-y",
+                    "@modelcontextprotocol/server-filesystem",
+                    "/data/hermes/workspace",
+                ],
+                "enabled": True,
+                "tools": {"resources": True, "prompts": False},
+            },
             "obsidian_vault": {
                 "command": "npx",
                 "args": [
