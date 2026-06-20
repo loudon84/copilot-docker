@@ -149,6 +149,7 @@ RUN echo "PIP_INDEX_URL=${PIP_INDEX_URL}" \
   && /app/venv/bin/python -m pip install --upgrade pip setuptools wheel \
   && cd /opt/hermes-agent \
   && (/app/venv/bin/python -m pip install -e ".[all]" || /app/venv/bin/python -m pip install -e .) \
+  && /app/venv/bin/python -m pip install -e ".[ddgs,exa,firecrawl,parallel-web]" \
   && /app/venv/bin/python - <<'PY'
 from run_agent import AIAgent
 print("OK: hermes-agent AIAgent importable from /app/venv")
