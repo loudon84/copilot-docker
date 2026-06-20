@@ -2,7 +2,8 @@
 # 构建全实例共享的 Hermes 镜像（只需执行一次，多个 instance 复用同一镜像）
 #
 # 用法：
-#   bash scripts/build-image.sh
+#   bash scripts/build-image.sh                 # 使用 .env.example 中的构建参数
+#   bash scripts/build-image.sh --default       # 同上（显式使用默认 env）
 #   bash scripts/build-image.sh writer          # 借用 instances/writer/.env 中的构建参数
 #   bash scripts/build-image.sh writer --no-cache
 #   bash scripts/build-image.sh writer --pull
@@ -43,7 +44,7 @@ while [ $# -gt 0 ]; do
   esac
   shift
 done
-
+'''
 if [ -n "$PROFILE" ] && [ -f "$BASE_DIR/instances/$PROFILE/.env" ]; then
   ENV_FILE="$BASE_DIR/instances/$PROFILE/.env"
 elif [ -f "$BASE_DIR/instances/writer/.env" ]; then
@@ -52,6 +53,23 @@ elif [ -f "$BASE_DIR/.env.example" ]; then
   ENV_FILE="$BASE_DIR/.env.example"
 else
   echo "[build-image] ERROR: 找不到 .env 文件，请先 create-instance 或提供 .env.example" >&2
+  exit 1
+fi
+'''
+
+if [ -n "$PROFILE" ] && [ "$PROFILE" != "--default" ]; then
+  if [ -f "$BASE_DIR/instances/$PROFILE/.env" ]; then
+    ENV_FILE="$BASE_DIR/instances/$PROFILE/.env"
+  else
+    echo "[build-image] ERROR: profile env not found: instances/$PROFILE/.env" >&2
+    exit 1
+  fi
+elif [ -f "$BASE_DIR/.env" ]; then
+  ENV_FILE="$BASE_DIR/.env"
+elif [ -f "$BASE_DIR/.env.example" ]; then
+  ENV_FILE="$BASE_DIR/.env.example"
+else
+  echo "[build-image] ERROR: 找不到 .env 或 .env.example" >&2
   exit 1
 fi
 
