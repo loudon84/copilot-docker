@@ -44,27 +44,8 @@ while [ $# -gt 0 ]; do
   esac
   shift
 done
-'''
-if [ -n "$PROFILE" ] && [ -f "$BASE_DIR/instances/$PROFILE/.env" ]; then
-  ENV_FILE="$BASE_DIR/instances/$PROFILE/.env"
-elif [ -f "$BASE_DIR/instances/writer/.env" ]; then
-  ENV_FILE="$BASE_DIR/instances/writer/.env"
-elif [ -f "$BASE_DIR/.env.example" ]; then
-  ENV_FILE="$BASE_DIR/.env.example"
-else
-  echo "[build-image] ERROR: 找不到 .env 文件，请先 create-instance 或提供 .env.example" >&2
-  exit 1
-fi
-'''
 
-if [ -n "$PROFILE" ] && [ "$PROFILE" != "--default" ]; then
-  if [ -f "$BASE_DIR/instances/$PROFILE/.env" ]; then
-    ENV_FILE="$BASE_DIR/instances/$PROFILE/.env"
-  else
-    echo "[build-image] ERROR: profile env not found: instances/$PROFILE/.env" >&2
-    exit 1
-  fi
-elif [ -f "$BASE_DIR/.env" ]; then
+if [ -f "$BASE_DIR/.env" ]; then
   ENV_FILE="$BASE_DIR/.env"
 elif [ -f "$BASE_DIR/.env.example" ]; then
   ENV_FILE="$BASE_DIR/.env.example"
