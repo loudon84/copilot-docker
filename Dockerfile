@@ -53,6 +53,9 @@ ENV UV_DEFAULT_INDEX=${PIP_INDEX_URL}
 
 COPY docker/apt-mirror.sh /usr/local/bin/apt-mirror.sh
 
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+  && apt-get install -y --no-install-recommends nodejs npm
+
 RUN chmod +x /usr/local/bin/apt-mirror.sh \
   && if [ "A${BUILD_APT_PROXY:-}" != "A" ]; then \
        printf 'Acquire::http::Proxy "%s";\n' "$BUILD_APT_PROXY" > /etc/apt/apt.conf.d/01proxy; \
@@ -64,7 +67,7 @@ RUN chmod +x /usr/local/bin/apt-mirror.sh \
     apt-utils locales sudo curl rsync openssh-client \
     build-essential python3-dev libffi-dev \
     git jq \
-    nodejs npm ripgrep ffmpeg procps xz-utils unzip \
+    ripgrep ffmpeg procps xz-utils unzip \
   && rm -rf /var/lib/apt/lists/* \
   && apt-get clean
 
