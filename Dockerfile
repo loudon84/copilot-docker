@@ -53,9 +53,6 @@ ENV UV_DEFAULT_INDEX=${PIP_INDEX_URL}
 
 COPY docker/apt-mirror.sh /usr/local/bin/apt-mirror.sh
 
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-  && apt-get install -y --no-install-recommends nodejs npm
-
 RUN chmod +x /usr/local/bin/apt-mirror.sh \
   && if [ "A${BUILD_APT_PROXY:-}" != "A" ]; then \
        printf 'Acquire::http::Proxy "%s";\n' "$BUILD_APT_PROXY" > /etc/apt/apt.conf.d/01proxy; \
@@ -70,6 +67,9 @@ RUN chmod +x /usr/local/bin/apt-mirror.sh \
     ripgrep ffmpeg procps xz-utils unzip \
   && rm -rf /var/lib/apt/lists/* \
   && apt-get clean
+
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+  && apt-get install -y --no-install-recommends nodejs npm
 
 RUN localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
 ENV LANG=en_US.utf8
