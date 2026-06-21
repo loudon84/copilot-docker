@@ -153,7 +153,7 @@ RUN echo "PIP_INDEX_URL=${PIP_INDEX_URL}" \
   "ddgs==9.14.4" \
   "exa-py==2.10.2" \
   "firecrawl-py==4.17.0" \
-  "parallel-web==0.4.2"
+  "parallel-web==0.4.2" \
   && /app/venv/bin/python - <<'PY'
 from run_agent import AIAgent
 print("OK: hermes-agent AIAgent importable from /app/venv")
