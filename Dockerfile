@@ -68,8 +68,12 @@ RUN chmod +x /usr/local/bin/apt-mirror.sh \
   && rm -rf /var/lib/apt/lists/* \
   && apt-get clean
 
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-  && apt-get install -y --no-install-recommends nodejs npm
+RUN apt-get purge -y nodejs npm || true \
+  && rm -rf /etc/apt/sources.list.d/nodesource* || true \
+  && apt-get update \
+  && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+  && apt-get install -y nodejs \
+  && node -v && npm -v
 
 RUN localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
 ENV LANG=en_US.utf8
