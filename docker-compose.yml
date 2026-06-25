@@ -38,6 +38,8 @@ services:
       # Hermes Agent API Server（容器内 API_SERVER_PORT；宿主机 HERMES_GATEWAY_PORT = 20000 + HERMES_WEBUI_PORT）
       - "${HERMES_GATEWAY_BIND:-0.0.0.0}:${HERMES_GATEWAY_PORT:-8642}:${API_SERVER_PORT:-8642}"
     environment:
+      PATH: /app/venv/bin:/opt/bun/bin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      VIRTUAL_ENV: /app/venv
       WANTED_UID: "1000"
       WANTED_GID: "1000"
       HERMES_PROFILE: ${HERMES_PROFILE:-default}
