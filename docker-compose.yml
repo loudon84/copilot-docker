@@ -84,6 +84,10 @@ services:
       HERMES_CURATOR_ENABLED: ${HERMES_CURATOR_ENABLED:-1}
       HERMES_SELF_EVOLUTION_ENABLED: ${HERMES_SELF_EVOLUTION_ENABLED:-0}
       TZ: Asia/Shanghai
+      NODESKCLAW_MCP_URL: ${NODESKCLAW_MCP_URL:-}
+      NODESKCLAW_MCP_TOKEN: ${NODESKCLAW_MCP_TOKEN:-}
+      NODESKCLAW_MCP_ENABLED: ${NODESKCLAW_MCP_ENABLED:-false}
+      NODESKCLAW_MCP_NAME: ${NODESKCLAW_MCP_NAME:-nodeskclaw-skills}
     volumes:
       - ./instances/${HERMES_PROFILE:-default}/data/hermes:/data/hermes
       - ./instances/${HERMES_PROFILE:-default}/data/hermes/tools:/home/hermeswebui/.hermes/tools
