@@ -33,6 +33,8 @@ services:
     image: ${LOCAL_IMAGE_NAME:-hermes-agent-webui:latest}
     container_name: hermes-${HERMES_PROFILE:-default}
     restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "${HERMES_WEBUI_BIND:-0.0.0.0}:${HERMES_WEBUI_PORT:-8787}:8787"
       # Hermes Agent API Server（容器内 API_SERVER_PORT；宿主机 HERMES_GATEWAY_PORT = 20000 + HERMES_WEBUI_PORT）
