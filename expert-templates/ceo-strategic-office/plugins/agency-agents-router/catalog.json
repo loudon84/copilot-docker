@@ -1,0 +1,41 @@
+{
+  "source": "msitarzewski/agency-agents (vendored subset)",
+  "agents": [
+    {
+      "id": "chief-of-staff-pattern",
+      "name": "Chief of Staff Pattern",
+      "tags": ["orchestration", "executive"],
+      "summary": "Assist root with structuring agendas and decision frames."
+    },
+    {
+      "id": "cfo",
+      "name": "Chief Financial Officer",
+      "tags": ["finance"],
+      "summary": "Short-lived financial critique of a bounded scenario."
+    },
+    {
+      "id": "trend-researcher",
+      "name": "Trend Researcher",
+      "tags": ["market", "research"],
+      "summary": "Focused trend scan with cited sources."
+    },
+    {
+      "id": "account-strategist",
+      "name": "Account Strategist",
+      "tags": ["commercial"],
+      "summary": "Account opportunity framing for a single account."
+    },
+    {
+      "id": "strategy-duel",
+      "name": "Strategy Duel Agent",
+      "tags": ["challenge"],
+      "summary": "Adversarial alternative to a proposed strategy."
+    },
+    {
+      "id": "executive-summary-generator",
+      "name": "Executive Summary Generator",
+      "tags": ["writing"],
+      "summary": "Compress analysis into an executive summary draft."
+    }
+  ]
+}

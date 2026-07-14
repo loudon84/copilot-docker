@@ -1,0 +1,41 @@
+kind: hermes-profile-team
+version: 1
+id: mini-team
+name: Mini Team Fixture
+
+root:
+  profile: default
+  template: root
+  role: chief-of-staff
+  orchestrator: true
+
+members:
+  - id: advisor-alpha
+    template: profiles/advisor-alpha
+    role: permanent-advisor
+
+orchestration:
+  engine: kanban
+  board: mini-team
+  dispatch_in_gateway: true
+  dispatch_interval_seconds: 30
+
+dynamic_experts:
+  provider: agency-agents-router
+  mode: ephemeral
+  enabled_profiles:
+    - default
+    - advisor-alpha
+
+shared_context:
+  host_relative_path: team-shared
+  container_path: /data/hermes/team-shared
+  mode: read-only
+
+memory:
+  isolation: per-profile
+  hindsight_bank_pattern: hermes-__INSTANCE__-__PROFILE__
+
+governance:
+  human_approval_required:
+    - board_decision

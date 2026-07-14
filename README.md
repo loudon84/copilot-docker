@@ -72,6 +72,21 @@ bash scripts/restart-instance.sh finance
 bash scripts/restart-instance.sh sale
 ```
 
+## CEO 战略办公室专家团队（Profile Team）
+
+PRD v1.8：1 个容器 + 1 个 root 首席幕僚 + 7 个命名顾问 Profile + Hermes Kanban + Agency Agents 动态专家池。
+
+```bash
+bash scripts/create-instance.sh ceo-office 9600 ceo-strategic-office
+bash scripts/up-instance.sh ceo-office
+bash scripts/check-expert-team.sh ceo-office ceo-strategic-office
+```
+
+- 模板包：`expert-templates/ceo-strategic-office/`（含 `team.yaml`）
+- 检测到 `team.yaml` 时，`inject-expert.sh` 自动转调 `inject-expert-team.sh`
+- 现有 `writer` / `finance` / `sale` 单专家行为不变
+- 单元与工作流测试：`python -m pytest tests/test_team_manifest.py tests/test_patch_config_runtime.py tests/test_inject_expert_team.py tests/test_ceo_team_workflows.py -q`
+
 ## 推送到火山引擎（nodeskclaw）
 
 ```bash
@@ -107,14 +122,22 @@ bash scripts/doctor-local-registry.sh
 ├── expert-templates/
 │   ├── base/
 │   ├── writer/
-│   └── finance/
+│   ├── finance/
+│   ├── sale/
+│   └── ceo-strategic-office/   # Profile Team（PRD v1.8）
 └── instances/
     ├── writer/
     │   ├── .env
     │   └── data/hermes/
-    └── finance/
+    ├── finance/
+    │   ├── .env
+    │   └── data/hermes/
+    └── ceo-office/             # 团队实例示例
         ├── .env
         └── data/hermes/
+            ├── team.yaml
+            ├── team-shared/
+            └── profiles/       # 7 个命名顾问
 ```
 
 ## Hermes Asset Bundles

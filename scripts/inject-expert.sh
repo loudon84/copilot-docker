@@ -7,6 +7,12 @@ DATA_DIR="$BASE_DIR/instances/$PROFILE/data/hermes"
 TPL_BASE="$BASE_DIR/expert-templates/base"
 TPL_EXPERT="$BASE_DIR/expert-templates/$EXPERT"
 [ -d "$TPL_EXPERT" ] || { echo "Expert template not found: $EXPERT"; exit 1; }
+
+# Team expert pack: delegate to inject-expert-team.sh (PRD v1.8)
+if [ -f "$TPL_EXPERT/team.yaml" ]; then
+  exec bash "$BASE_DIR/scripts/inject-expert-team.sh" "$PROFILE" "$EXPERT"
+fi
+
 mkdir -p "$DATA_DIR" "$DATA_DIR/.backup"
 TS="$(date +%Y%m%d-%H%M%S)"
 

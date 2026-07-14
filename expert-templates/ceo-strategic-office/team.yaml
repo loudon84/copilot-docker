@@ -1,0 +1,68 @@
+kind: hermes-profile-team
+version: 1
+id: ceo-strategic-office
+name: CEO Strategic Office
+
+root:
+  profile: default
+  template: root
+  role: chief-of-staff
+  orchestrator: true
+
+members:
+  - id: strategy-investment
+    template: profiles/strategy-investment
+    role: permanent-advisor
+  - id: commercial-market-intelligence
+    template: profiles/commercial-market-intelligence
+    role: permanent-advisor
+  - id: finance-board-governance
+    template: profiles/finance-board-governance
+    role: permanent-advisor
+  - id: operations-supply-risk
+    template: profiles/operations-supply-risk
+    role: permanent-advisor
+  - id: technology-rd-ai
+    template: profiles/technology-rd-ai
+    role: permanent-advisor
+  - id: strategy-red-team
+    template: profiles/strategy-red-team
+    role: review-gate
+  - id: compliance-evidence
+    template: profiles/compliance-evidence
+    role: review-gate
+
+orchestration:
+  engine: kanban
+  board: ceo-strategic-office
+  dispatch_in_gateway: true
+  dispatch_interval_seconds: 30
+
+dynamic_experts:
+  provider: agency-agents-router
+  mode: ephemeral
+  source: msitarzewski/agency-agents
+  enabled_profiles:
+    - default
+    - strategy-investment
+    - commercial-market-intelligence
+    - technology-rd-ai
+
+shared_context:
+  host_relative_path: team-shared
+  container_path: /data/hermes/team-shared
+  mode: read-only
+
+memory:
+  isolation: per-profile
+  hindsight_bank_pattern: hermes-__INSTANCE__-__PROFILE__
+
+governance:
+  human_approval_required:
+    - board_decision
+    - investment_commitment
+    - external_communication
+    - contract_commitment
+    - pricing_commitment
+    - legal_conclusion
+    - personnel_decision

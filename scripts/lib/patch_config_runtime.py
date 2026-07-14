@@ -38,9 +38,29 @@ def runtime_patch(
     hindsight_bank_id: str,
     gbrain_enabled: bool = True,
     gbrain_command: str = "/usr/local/bin/gbrain",
+    *,
+    profile_home: str = "/data/hermes",
+    workspace_path: str | None = None,
+    vault_path: str | None = None,
+    gbrain_home: str | None = None,
+    kanban_dispatcher: str | None = None,
+    enable_delegation: bool = False,
 ) -> dict:
+    """Build runtime patch.
+
+    kanban_dispatcher:
+      None / "omit" — do not write kanban (single-expert backward compatible)
+      "on" — root dispatcher enabled
+      "off" — named profile worker; dispatcher disabled
+    """
     bank_id = hindsight_bank_id or f"hermes-{profile}"
-    return {
+    home = profile_home.rstrip("/") or "/data/hermes"
+    workspace = workspace_path or f"{home}/workspace"
+    vault = vault_path or f"{home}/obsidian-vault"
+    # gbrain_home reserved for future path wiring; command stays binary for now
+    _ = gbrain_home
+
+    patch: dict = {
         "memory": {
             "provider": "hindsight",
             "mode": "local_external",
@@ -53,7 +73,7 @@ def runtime_patch(
                 "args": [
                     "-y",
                     "@modelcontextprotocol/server-filesystem",
-                    "/data/hermes/workspace",
+                    workspace,
                 ],
                 "enabled": True,
                 "tools": {"resources": True, "prompts": False},
@@ -63,7 +83,7 @@ def runtime_patch(
                 "args": [
                     "-y",
                     "@modelcontextprotocol/server-filesystem",
-                    "/data/hermes/obsidian-vault",
+                    vault,
                 ],
                 "enabled": True,
                 "tools": {"resources": True, "prompts": False},
@@ -97,6 +117,28 @@ def runtime_patch(
         },
     }
 
+    mode = (kanban_dispatcher or "omit").lower()
+    if mode == "on":
+        patch["kanban"] = {
+            "dispatch_in_gateway": True,
+            "dispatch_interval_seconds": 30,
+        }
+    elif mode == "off":
+        # Named profiles must not run an independent dispatcher.
+        patch["kanban"] = {
+            "dispatch_in_gateway": False,
+        }
+
+    if enable_delegation:
+        patch["delegation"] = {
+            "max_concurrent_children": 3,
+            "max_spawn_depth": 1,
+            "orchestrator_enabled": True,
+            "inherit_mcp_toolsets": False,
+        }
+
+    return patch
+
 
 def main() -> int:
     parser = argparse.ArgumentParser()
@@ -106,9 +148,25 @@ def main() -> int:
     parser.add_argument("--hindsight-bank-id", default="")
     parser.add_argument("--gbrain-enabled", default="1")
     parser.add_argument("--gbrain-command", default="/usr/local/bin/gbrain")
+    parser.add_argument("--profile-home", default="/data/hermes")
+    parser.add_argument("--workspace-path", default="")
+    parser.add_argument("--vault-path", default="")
+    parser.add_argument("--gbrain-home", default="")
+    parser.add_argument(
+        "--kanban-dispatcher",
+        default="omit",
+        choices=("omit", "on", "off"),
+        help="omit=single-expert compat; on=root dispatcher; off=named worker",
+    )
+    parser.add_argument(
+        "--enable-delegation",
+        default="0",
+        help="1 for orchestrator root; 0 otherwise",
+    )
     args = parser.parse_args()
 
     gbrain_enabled = args.gbrain_enabled not in ("0", "false", "False")
+    enable_delegation = args.enable_delegation not in ("0", "false", "False")
     data = load_yaml(args.config)
     patch = runtime_patch(
         args.profile,
@@ -116,6 +174,12 @@ def main() -> int:
         args.hindsight_bank_id,
         gbrain_enabled=gbrain_enabled,
         gbrain_command=args.gbrain_command,
+        profile_home=args.profile_home or "/data/hermes",
+        workspace_path=args.workspace_path or None,
+        vault_path=args.vault_path or None,
+        gbrain_home=args.gbrain_home or None,
+        kanban_dispatcher=args.kanban_dispatcher,
+        enable_delegation=enable_delegation,
     )
     deep_update(data, patch)
 

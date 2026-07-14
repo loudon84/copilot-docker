@@ -13,6 +13,7 @@
 #   --dry-run   只打印命令，不执行
 #   --no-push   仅构建到本地，不推送
 #   --tag TAG   覆盖 IMAGE_TAG
+#   --from-image [REF]  跳过构建，将已有本地镜像 retag 后推送（默认 hermes-agent-webui:latest）
 
 set -euo pipefail
 
@@ -25,11 +26,20 @@ grep -q '^instances/$' "$BASE_DIR/.dockerignore" || { echo "ERROR: .dockerignore
 DRY_RUN=0
 NO_PUSH=0
 TAG_OVERRIDE=""
+FROM_IMAGE=""
+FROM_IMAGE_SET=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --dry-run) DRY_RUN=1 ;;
     --no-push) NO_PUSH=1 ;;
+    --from-image)
+      FROM_IMAGE_SET=1
+      if [ "${2:-}" != "" ] && [[ "${2:-}" != --* ]]; then
+        FROM_IMAGE="$2"
+        shift
+      fi
+      ;;
     --tag)
       shift
       TAG_OVERRIDE="${1:?--tag requires a value}"
@@ -88,6 +98,7 @@ fi
 
 FULL_IMAGE="${IMAGE_REPO}:${IMAGE_TAG}"
 REPO_NAME="${IMAGE_REPO#*/}"
+SOURCE_IMAGE="${FROM_IMAGE:-${LOCAL_IMAGE_NAME:-hermes-agent-webui:latest}}"
 
 if ! command -v docker >/dev/null 2>&1; then
   echo "ERROR: docker 未安装" >&2
@@ -134,46 +145,87 @@ if [ "$DRY_RUN" = "0" ]; then
   echo "[pass] registry 可达"
 fi
 
-if [ "$USE_BUILDX" = "1" ]; then
-  BUILDER_NAME="${BUILDX_BUILDER:-hermes-local-registry-builder}"
-  if ! docker buildx inspect "$BUILDER_NAME" >/dev/null 2>&1; then
-    echo "[buildx] create builder: $BUILDER_NAME"
-    if [ "$DRY_RUN" = "0" ]; then
-      docker buildx create --name "$BUILDER_NAME" --use
-    fi
-  else
-    if [ "$DRY_RUN" = "0" ]; then
-      docker buildx use "$BUILDER_NAME"
-    fi
+if [ "$FROM_IMAGE_SET" = "1" ]; then
+  echo "[from-image] source: ${SOURCE_IMAGE}"
+  echo "[from-image] target: ${FULL_IMAGE}"
+  if [ "$DRY_RUN" = "1" ]; then
+    echo
+    echo "[dry-run] docker image inspect ${SOURCE_IMAGE}"
+    echo "[dry-run] docker tag ${SOURCE_IMAGE} ${FULL_IMAGE}"
+    echo "[dry-run] bash scripts/doctor-image.sh ${FULL_IMAGE}"
+    echo "[dry-run] docker push ${FULL_IMAGE}"
+    exit 0
   fi
+  if ! docker image inspect "$SOURCE_IMAGE" >/dev/null 2>&1; then
+    echo "ERROR: source image not found: ${SOURCE_IMAGE}" >&2
+    echo "       build and promote first, e.g.:" >&2
+    echo "         bash scripts/verify-build-image.sh" >&2
+    echo "         bash scripts/promote-verify-to-latest.sh <verify_image>" >&2
+    exit 1
+  fi
+  docker tag "$SOURCE_IMAGE" "$FULL_IMAGE"
+elif [ "$DRY_RUN" = "1" ]; then
+  if [ "$USE_BUILDX" = "1" ]; then
+    BUILDER_NAME="${BUILDX_BUILDER:-hermes-local-registry-builder}"
+    if ! docker buildx inspect "$BUILDER_NAME" >/dev/null 2>&1; then
+      echo "[buildx] create builder: $BUILDER_NAME"
+    else
+      echo "[buildx] use builder: $BUILDER_NAME"
+    fi
 
-  BUILD_CMD=(
-    docker buildx build
-    --platform "$BUILD_PLATFORM"
-    -t "$FULL_IMAGE"
-    "${BUILD_ARGS[@]}"
-    --load
-    .
-  )
-  echo "[build] ${FULL_IMAGE} (buildx --load)"
-else
-  BUILD_CMD=(
-    docker build
-    -t "$FULL_IMAGE"
-    "${BUILD_ARGS[@]}"
-    .
-  )
-  echo "[build] ${FULL_IMAGE} (docker build)"
-fi
-printf '  '; printf '%q ' "${BUILD_CMD[@]}"; echo
-
-if [ "$DRY_RUN" = "1" ]; then
+    BUILD_CMD=(
+      docker buildx build
+      --platform "$BUILD_PLATFORM"
+      -t "$FULL_IMAGE"
+      "${BUILD_ARGS[@]}"
+      --load
+      .
+    )
+    echo "[build] ${FULL_IMAGE} (buildx --load)"
+  else
+    BUILD_CMD=(
+      docker build
+      -t "$FULL_IMAGE"
+      "${BUILD_ARGS[@]}"
+      .
+    )
+    echo "[build] ${FULL_IMAGE} (docker build)"
+  fi
+  printf '  '; printf '%q ' "${BUILD_CMD[@]}"; echo
   echo
   echo "[dry-run] 将执行: docker push ${FULL_IMAGE}"
   exit 0
-fi
+else
+  if [ "$USE_BUILDX" = "1" ]; then
+    BUILDER_NAME="${BUILDX_BUILDER:-hermes-local-registry-builder}"
+    if ! docker buildx inspect "$BUILDER_NAME" >/dev/null 2>&1; then
+      echo "[buildx] create builder: $BUILDER_NAME"
+      docker buildx create --name "$BUILDER_NAME" --use
+    else
+      docker buildx use "$BUILDER_NAME"
+    fi
 
-"${BUILD_CMD[@]}"
+    BUILD_CMD=(
+      docker buildx build
+      --platform "$BUILD_PLATFORM"
+      -t "$FULL_IMAGE"
+      "${BUILD_ARGS[@]}"
+      --load
+      .
+    )
+    echo "[build] ${FULL_IMAGE} (buildx --load)"
+  else
+    BUILD_CMD=(
+      docker build
+      -t "$FULL_IMAGE"
+      "${BUILD_ARGS[@]}"
+      .
+    )
+    echo "[build] ${FULL_IMAGE} (docker build)"
+  fi
+  printf '  '; printf '%q ' "${BUILD_CMD[@]}"; echo
+  "${BUILD_CMD[@]}"
+fi
 
 if [ "$NO_PUSH" = "1" ]; then
   echo
@@ -182,7 +234,6 @@ if [ "$NO_PUSH" = "1" ]; then
   exit 0
 fi
 
-LOCAL_IMAGE_NAME="${LOCAL_IMAGE_NAME:-hermes-agent-webui:latest}"
 echo
 echo "[doctor] 推送前验收: $FULL_IMAGE"
 bash "$BASE_DIR/scripts/doctor-image.sh" "$FULL_IMAGE"
