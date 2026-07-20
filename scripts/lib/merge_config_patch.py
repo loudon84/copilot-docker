@@ -26,6 +26,17 @@ def deep_merge(base: Dict[str, Any], patch: Dict[str, Any]) -> Dict[str, Any]:
             continue
         if isinstance(value, dict) and isinstance(out.get(key), dict):
             out[key] = deep_merge(out[key], value)
+        elif (
+            key == "enabled"
+            and isinstance(value, list)
+            and isinstance(out.get(key), list)
+        ):
+            # Union plugins.enabled (and similar allow-lists) instead of replace
+            merged = list(out[key])
+            for item in value:
+                if item not in merged:
+                    merged.append(item)
+            out[key] = merged
         else:
             out[key] = value
     return out

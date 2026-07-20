@@ -86,6 +86,17 @@ if [ "$EXPERT" = "bi-strategic-office" ] || [ -d "$TPL_EXPERT/semantic" ]; then
   else
     echo "[bi] WARN: plugin bundle missing: $PLUGIN_SRC"
   fi
+
+  # Hermes plugins are opt-in: must appear in config.yaml plugins.enabled
+  PYTHON_BIN="$(command -v python3 || command -v python || true)"
+  if [ -n "$PYTHON_BIN" ] && [ -f "$DATA_DIR/config.yaml" ]; then
+    "$PYTHON_BIN" "$BASE_DIR/scripts/lib/enable_finance_bi_plugin.py" \
+      --config "$DATA_DIR/config.yaml" \
+      --plugin hermes-finance-bi-plugin \
+      --toolset finance-bi || echo "[bi] WARN: failed to enable plugin in config.yaml"
+  else
+    echo "[bi] WARN: could not enable plugin in config (missing python or config.yaml)"
+  fi
   mkdir -p \
     "$DATA_DIR/finance-bi/state" \
     "$DATA_DIR/workspace/exports/bi" \

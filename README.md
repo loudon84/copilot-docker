@@ -242,7 +242,32 @@ bash scripts/check-finance-bi.sh financial-analysis   # 或 bi-strategic-office
 |------|------|------|
 | `WARN: FINANCE_BI_DSN is empty` | 尚未配置只读库，**结构检查仍可通过** | 编辑 `.env` 填 DSN → `sync-runtime-env` → `restart-instance` |
 | `PASS: semantic catalog loads` | 语义 YAML 正常 | 无需处理 |
-| `WARN: … plugins list did not …` / `plugin code loads … CLI did not list` | 文件已就位，但 Hermes CLI 尚未列出工具 | 重新 inject + restart，再用 `hermes tools --summary \| grep finance_bi` 确认 |
+| `FAIL: config.yaml missing plugins.enabled` | **Hermes 插件默认 opt-in，未 enable 不会加载** | 见下方 enable 步骤 |
+| `WARN: Hermes CLI listing skipped` | `hermes tools` **禁止 pipe/非 TTY** | 用 script 伪 TTY 或交互终端查看 |
+
+**重要：插件必须 enable**（仅复制到 `plugins/` 不够）：
+
+```bash
+# 推荐：重新 inject（会写入 plugins.enabled）
+bash scripts/inject-expert.sh financial-analysis bi-strategic-office
+bash scripts/restart-instance.sh financial-analysis
+
+# 或手动写入配置
+python3 scripts/lib/enable_finance_bi_plugin.py \
+  --config instances/financial-analysis/data/hermes/config.yaml
+bash scripts/restart-instance.sh financial-analysis
+
+# 或容器内 CLI（需交互 TTY）
+docker exec -it hermes-financial-analysis hermes plugins enable hermes-finance-bi-plugin
+```
+
+确认 `config.yaml` 含：
+
+```yaml
+plugins:
+  enabled:
+    - hermes-finance-bi-plugin
+```
 
 实例名可为任意 profile（如 `financial-analysis`），专家模板仍是 `bi-strategic-office`：
 
@@ -251,9 +276,18 @@ bash scripts/inject-expert.sh financial-analysis bi-strategic-office
 bash scripts/sync-runtime-env.sh financial-analysis
 bash scripts/restart-instance.sh financial-analysis
 bash scripts/check-finance-bi.sh financial-analysis
+```
 
-docker exec hermes-financial-analysis hermes tools --summary | grep finance_bi
-docker exec hermes-financial-analysis hermes plugins list
+确认工具（注意：`hermes tools` 不能直接 `| grep`，需要伪 TTY 或交互终端）：
+
+```bash
+# 推荐：容器内用 script 伪造 TTY，再在宿主机 grep
+docker exec hermes-financial-analysis bash -lc \
+  'script -qfc "hermes tools --summary" /dev/null' | grep finance_bi
+
+# 查看插件是否已 enable
+docker exec hermes-financial-analysis bash -lc \
+  'script -qfc "hermes plugins list" /dev/null' | grep -i finance
 ```
 
 配置 DSN 示例（写入 `instances/financial-analysis/.env`）：

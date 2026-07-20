@@ -74,6 +74,20 @@ else
   fail "instance .env missing"
 fi
 
+# plugins.enabled opt-in (required for Hermes to load the plugin)
+if [ -f "$DATA_DIR/config.yaml" ]; then
+  if grep -qE 'hermes-finance-bi-plugin' "$DATA_DIR/config.yaml" \
+    && grep -A20 -E '^plugins:' "$DATA_DIR/config.yaml" | grep -q 'hermes-finance-bi-plugin'; then
+    pass "config.yaml plugins.enabled includes hermes-finance-bi-plugin"
+  else
+    fail "config.yaml missing plugins.enabled: hermes-finance-bi-plugin (Hermes 默认不加载未 enable 的插件)"
+    warn "修复: python3 scripts/lib/enable_finance_bi_plugin.py --config instances/$PROFILE/data/hermes/config.yaml"
+    warn "或: docker exec -it $CONTAINER hermes plugins enable hermes-finance-bi-plugin"
+  fi
+else
+  fail "config.yaml missing"
+fi
+
 # Catalog load via host python (no container required)
 export FINANCE_BI_CATALOG_PATH="$DATA_DIR/finance-bi/semantic"
 export FINANCE_BI_POLICY_PATH="$DATA_DIR/finance-bi/policies"
@@ -148,16 +162,10 @@ if docker inspect "$CONTAINER" >/dev/null 2>&1; then
     fail "container export dir not writable"
   fi
 
-  # Prefer tools --summary (more reliable than plugins list text format)
-  TOOLS_OUT="$(docker exec "$CONTAINER" bash -lc 'hermes tools --summary 2>/dev/null || hermes tools 2>/dev/null || true' || true)"
-  PLUGINS_OUT="$(docker exec "$CONTAINER" bash -lc 'hermes plugins list 2>/dev/null || true' || true)"
-  COMBINED="${TOOLS_OUT}"$'\n'"${PLUGINS_OUT}"
-
-  if echo "$COMBINED" | grep -qiE 'finance_bi_ask|finance-bi|hermes-finance-bi'; then
-    pass "Hermes runtime exposes finance-bi tools/plugin"
-  else
-    # Fallback: prove Python can load plugin inside container venv
-    if docker exec "$CONTAINER" bash -lc '
+  # Hermes CLI rejects pipes/non-TTY ("requires an interactive terminal").
+  # Doctor primary check: plugin register() importable in container.
+  # Optional secondary: fake a TTY via `script` then scan output.
+  if docker exec "$CONTAINER" bash -lc '
       export PYTHONPATH=/data/hermes/plugins/hermes-finance-bi-plugin
       /app/venv/bin/python - <<EOF
 import importlib.util
@@ -177,12 +185,29 @@ assert callable(mod.register)
 print("container_register_ok")
 EOF
     '; then
-      warn "plugin code loads in container, but hermes CLI did not list finance-bi yet"
-      warn "→ 执行: bash scripts/inject-expert.sh $PROFILE bi-strategic-office && bash scripts/restart-instance.sh $PROFILE"
-      warn "→ 再查: docker exec $CONTAINER hermes tools --summary | grep finance_bi"
-    else
-      fail "plugin neither listed by hermes nor importable in container"
-    fi
+    pass "plugin register() importable in container"
+  else
+    fail "plugin not importable in container"
+  fi
+
+  # Optional CLI listing with fake TTY (script). Do not pipe hermes stdout directly.
+  CLI_OUT="$(
+    docker exec "$CONTAINER" bash -lc '
+      if command -v script >/dev/null 2>&1; then
+        script -qfc "hermes tools --summary" /dev/null 2>/dev/null || true
+        script -qfc "hermes plugins list" /dev/null 2>/dev/null || true
+      else
+        # last resort: allocate TTY from docker (may still fail under capture)
+        true
+      fi
+    ' 2>/dev/null || true
+  )"
+  if echo "$CLI_OUT" | grep -qiE 'finance_bi_ask|finance-bi|hermes-finance-bi'; then
+    pass "Hermes CLI lists finance-bi tools (via script TTY)"
+  else
+    warn "Hermes CLI listing skipped/unavailable (tools 需交互终端；插件 import 已通过即可)"
+    warn "人工确认: docker exec -it $CONTAINER hermes tools --summary"
+    warn "或: docker exec $CONTAINER bash -lc 'script -qfc \"hermes tools --summary\" /dev/null' | grep finance_bi"
   fi
 
   # Env inside Hermes home

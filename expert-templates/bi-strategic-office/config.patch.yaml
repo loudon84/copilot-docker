@@ -15,3 +15,8 @@ display:
 
 memory:
   nudge_interval: 0
+
+# Hermes general plugins are opt-in (not loaded until listed here).
+plugins:
+  enabled:
+    - hermes-finance-bi-plugin
