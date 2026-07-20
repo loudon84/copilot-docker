@@ -1,0 +1,25 @@
+id: ebs1_cux_ar_gp_details
+name: 授权分销销售毛利明细
+physical_table: dbo.ebs1_cux_ar_gp_details
+grain: detail
+# 以下主键/时间/主体字段名请用字典表生成结果覆盖（见 GUIDE / sync_bi_semantic_from_dw_dict.py）
+primary_time_field: null
+entity_field: null
+currency_field: null
+available_dimensions: []
+available_metrics: []
+allowed_joins: []
+data_updated_at_field: null
+use_cases:
+  - 授权分销销售毛利报表
+  - 产品/客户/区域毛利分析
+forbidden_use_cases:
+  - 付款核销
+  - 凭证过账
+fields: {}
+source_dictionary: dbo.DW_AI_Table_Column_List
+notes: >
+  占位数据集。请在可连库环境执行
+  python scripts/lib/sync_bi_semantic_from_dw_dict.py --table ebs1_cux_ar_gp_details
+  从 DW_AI_Table_Column_List 填充 fields / dimensions，再人工补全 metrics/*.yaml 表达式。
+datasource: dw_temp

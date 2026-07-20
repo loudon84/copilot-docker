@@ -2,7 +2,9 @@
 
 财务经营分析办公室（BI 智能问数）：语义目录 → `SemanticQuery` → 确定性 SQL → 只读库。进程内插件 `hermes-finance-bi-plugin`，**不**新增独立查询服务、容器或端口；**禁止**注册原始 SQL Tool。
 
-PRD：[`prd/v1.9_strategic-office-finance-bi.md`](../../prd/v1.9_strategic-office-finance-bi.md)
+- **业务使用指南**：[GUIDE.md](GUIDE.md)（问数原理、提问规范、结果解读）
+- 部署与运维：本文下方章节
+- PRD：[`prd/v1.9_strategic-office-finance-bi.md`](../../prd/v1.9_strategic-office-finance-bi.md)
 
 ## 能力边界
 

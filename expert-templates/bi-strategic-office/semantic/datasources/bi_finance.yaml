@@ -1,7 +1,13 @@
-id: bi_finance
-name: BI Finance Readonly
+id: dw_temp
+name: DW_TEMP（授权分销销售毛利）
 dialect: mssql
+host: 192.168.99.37
+port: 4399
+database: DW_TEMP
 schemas:
-  - bi_finance
-  - bi_sales
-description: Read-only BI warehouse for operating analytics (SQL Server 2012+).
+  - dbo
+description: >
+  SQL Server 2012 只读库 DW_TEMP。
+  主事实表 ebs1_cux_ar_gp_details（授权分销销售毛利报表）；
+  字段字典表 DW_AI_Table_Column_List（表名/字段名/业务解释）。
+dictionary_table: dbo.DW_AI_Table_Column_List
