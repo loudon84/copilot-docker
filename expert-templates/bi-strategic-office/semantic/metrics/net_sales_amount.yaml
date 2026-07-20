@@ -5,10 +5,10 @@ aliases:
   - 销售收入
   - 净销售
 description: 扣除退货折扣后的净销售额
-expression: SUM(net_sales_amount)
+expression: SUM(act_sales_amount_usd)
 aggregation: sum
 currency_aware: true
 format: amount
 version: 1
 datasets:
-  - product_profit_daily
+  - ebs1_cux_ar_gp_details
