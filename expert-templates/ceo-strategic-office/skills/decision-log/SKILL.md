@@ -1,12 +1,12 @@
 ---
 name: decision-log
-description: Persist CEO decisions, owners, deadlines, assumptions, and review dates under root control paths.
+description: 在 root 可控路径下持久化 CEO 决策、负责人、截止日、假设与复盘日期。
 ---
 
-# Decision Log
+# decision-log
 
-Write formal logs to:
+正式日志写入：
 - `/data/hermes/workspace/reports/ceo/decisions`
-- Reviewed Markdown summaries only → `/data/hermes/obsidian-vault/60-Reports/CEO-Decisions`
+- 已审阅 Markdown 摘要 → `/data/hermes/obsidian-vault/60-Reports/CEO-Decisions`
 
-Sensitive raw materials stay in workspace. Never write credentials or unreviewed board packs to team-shared.
+敏感原始材料留在 workspace。禁止将凭证或未审阅董事会材料写入 team-shared。

@@ -1,9 +1,9 @@
 ---
 name: investment-review
-description: Investment / M&A / capital allocation review with downside cases and do-nothing analysis.
+description: 投资 / 并购 / 资本配置评审，含下行情景与“什么都不做”分析。
 ---
 
-# Investment Review
+# investment-review
 
-Cover strategic fit, capital at risk, alternatives, exit logic, and required approvals.
-D3+ must route through red-team and compliance gates before final brief.
+覆盖战略匹配、风险资本、备选方案、退出逻辑与所需审批。
+D3+ 在最终简报前须经红队与合规门禁。

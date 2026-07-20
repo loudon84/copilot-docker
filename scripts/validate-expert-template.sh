@@ -13,6 +13,22 @@ pass() { echo "PASS: $*"; }
 [ -f "$TPL/SOUL.md" ] || fail "missing SOUL.md"
 pass "SOUL.md"
 
+# 正文须简体中文；禁止 Form Feed 等控制字符（见 .cursor/rules/expert-template-docs.mdc §0）
+if command -v python3 >/dev/null 2>&1; then
+  PY=python3
+elif command -v python >/dev/null 2>&1; then
+  PY=python
+else
+  fail "python3/python required for expert doc char check"
+fi
+# 业务模板强制简体中文正文；base/default 由 checker 内部跳过中文硬要求
+ZH_FLAG=()
+case "$EXPERT" in
+  base|default) ;;
+  *) ZH_FLAG=(--require-zh) ;;
+esac
+"$PY" "$BASE_DIR/scripts/lib/check_expert_doc_chars.py" "$TPL" "${ZH_FLAG[@]}" || fail "expert doc language/char check"
+
 if [ -f "$TPL/team.yaml" ]; then
   pass "team.yaml present (profile team)"
   [ -d "$TPL/root" ] || fail "team template missing root/"

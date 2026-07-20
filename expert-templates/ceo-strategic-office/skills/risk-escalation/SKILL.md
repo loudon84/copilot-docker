@@ -1,8 +1,8 @@
 ---
 name: risk-escalation
-description: Escalate material risks, blockers, and approval gates to root Chief of Staff.
+description: 将重大风险、阻塞与审批门禁升级给 root 幕僚长。
 ---
 
-# Risk Escalation
+# risk-escalation
 
-When blocked: use Kanban Block + Comment. Root must disclose missing advisor views; never fabricate.
+受阻时：使用 Kanban Block + Comment。root 须披露缺失的顾问观点；禁止编造。

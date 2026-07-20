@@ -16,8 +16,7 @@ metadata:
 
 ## 子角色提示
 
-见 
-eferences/roles/：
+见 references/roles/：
 - query-analyst.md
 - performance-analyst.md
 - semantic-governance.md
@@ -26,8 +25,8 @@ eferences/roles/：
 ## 流程
 
 1. 歧义则先澄清，不猜口径。
-2. 取数用 inance_bi_ask / inance_bi_followup。
-3. 口径解释用 inance_bi_explain / inance_bi_catalog_search。
-4. 正式报告前用 inance_bi_validate_result。
-5. 导出用 inance_bi_export_result（csv/xlsx）。
+2. 取数用 finance_bi_ask / finance_bi_followup。
+3. 口径解释用 finance_bi_explain / finance_bi_catalog_search。
+4. 正式报告前用 finance_bi_validate_result。
+5. 导出用 finance_bi_export_result（csv/xlsx）。
 6. 不得修改工具返回的数字。

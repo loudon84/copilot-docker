@@ -39,8 +39,9 @@ finance_bi_export_result
 ## 创建与注入
 
 ```bash
-# 校验模板
+# 校验模板（含 SOUL/AGENTS/SKILL：简体中文说明 + 禁止控制字符）
 bash scripts/validate-expert-template.sh bi-strategic-office
+python scripts/lib/check_expert_doc_chars.py expert-templates/bi-strategic-office --require-zh
 
 # 创建实例（WebUI 8790，Gateway 28790）
 bash scripts/create-instance.sh bi-strategic-office 8790 bi-strategic-office

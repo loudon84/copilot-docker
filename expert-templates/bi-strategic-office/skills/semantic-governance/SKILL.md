@@ -10,4 +10,4 @@ metadata:
 
 # semantic-governance
 
-使用 inance_bi_explain 与 inance_bi_catalog_search 解释指标、数据集、时间字段与币种口径。
+使用 finance_bi_explain 与 finance_bi_catalog_search 解释指标、数据集、时间字段与币种口径。

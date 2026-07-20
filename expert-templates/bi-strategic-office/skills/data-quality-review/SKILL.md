@@ -10,4 +10,4 @@ metadata:
 
 # data-quality-review
 
-正式输出前调用 inance_bi_validate_result，检查主体、时间、币种、聚合粒度与警告。
+正式输出前调用 finance_bi_validate_result，检查主体、时间、币种、聚合粒度与警告。

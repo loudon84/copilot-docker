@@ -81,6 +81,8 @@ bash scripts/restart-instance.sh sale
 
 各专家的完整说明、注入脚本与部署步骤见对应模板目录 `README.md`。根 README 仅登记路径与简述。
 
+**编写约束（强制）**：业务专家的 `SOUL.md`、`AGENT.md` / `AGENTS.md`、`SKILL.md` 说明正文须为**简体中文**（工具名等特殊命名可英文）；**禁止** Form Feed（`U+000C`）等控制/零宽字符（否则会出现 `inance_bi_*` 一类缺字）。`validate-expert-template.sh` 对业务模板硬校验语言与字符。
+
 | 模板路径 | 简述 | 说明 |
 |----------|------|------|
 | `expert-templates/writer/` | 中文写作与内容生产 | [README](expert-templates/writer/README.md) |

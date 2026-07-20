@@ -15,6 +15,53 @@ alwaysApply: true
 | `expert-templates/<id>/README.md` | 该模板的完整说明：专家描述、能力边界、注入/校验/诊断脚本、运行时要点 |
 | 仓库根 `README.md` | **仅登记新增**专家/团队：路径 + 一句话简述；**不**记录后续更新 changelog |
 
+## 0. 正文语言与字符约束（强制）
+
+创建或更新**业务专家/专家团队**（非 `base/`、`default/`）时，下列文件的**说明正文必须使用简体中文**；工具名、标识符、路径等特殊命名允许英文：
+
+| 文件 | 常见路径 |
+|------|----------|
+| `SOUL.md` | `expert-templates/<id>/SOUL.md`、团队子 Profile 下同名文件 |
+| `AGENTS.md` / `AGENT.md` | `expert-templates/<id>/workspace/AGENTS.md` 等 |
+| `SKILL.md` | `expert-templates/<id>/skills/**/SKILL.md` |
+
+允许保留的英文仅限：
+
+- YAML frontmatter 键名、`name` / `tags` / `category` 等标识符
+- 工具名、命令、路径、环境变量、代码标识符（如 `finance_bi_ask`）
+- 专有名词缩写（如 CSV、YoY）在中文句子中的必要混用
+
+**禁止**在上述文件中写入控制字符或不可见特殊字符（会导致工具名显示成 `inance_bi_*` / 异常 `ff` 等），包括但不限于：
+
+- Form Feed（`U+000C`，常把 `finance` 显示成 `inance`）
+- Backspace（`U+0008`）
+- NUL、BEL，以及其他除常规空白（空格 / Tab / LF / CR）以外的 ASCII 控制字符
+- 零宽字符（如 `U+200B`）、BOM 混入正文
+
+```txt
+# ❌ 错误：控制字符吞掉字母
+- <U+000C>inance_bi_ask    # 禁止；不得写成看起来像 finance 实为控制符+inance
+见 <U+000C>eferences/...   # 禁止
+
+# ✅ 正确
+- finance_bi_ask
+见 references/roles/
+```
+
+写完后自检：
+
+1. 说明正文为简体中文（特殊命名可英文）
+2. 工具名完整可读（如 `finance_bi_ask`，不得缺首字母）
+3. 文件中无上述控制/零宽字符
+
+校验命令（创建/更新专家后应通过）：
+
+```bash
+bash scripts/validate-expert-template.sh <template-id>
+```
+
+`validate-expert-template.sh` 对业务模板（非 `base/`、`default/`）同时硬校验：控制/零宽字符 + 说明正文含简体中文。
+
 ## 1. 新建模板 → 必须创建模板 README
 
 在 `expert-templates/<id>/` 新建专家或专家团队时，**必须**同步创建同目录 `README.md`，至少包含：

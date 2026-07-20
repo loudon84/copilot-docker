@@ -1,23 +1,23 @@
 ---
 name: executive-decision-brief
-description: Produce a CEO decision brief with the mandatory 12-section contract (3-minute read).
+description: 产出含强制 12 节契约的 CEO 决策简报（约 3 分钟可读完）。
 ---
 
-# Executive Decision Brief
+# executive-decision-brief
 
-Every formal brief MUST include:
+每份正式简报必须包含：
 
-1. Decision required (what + deadline)
-2. Recommendation (exactly one primary)
-3. Why now (trigger, urgency, cost of delay)
-4. Evidence (facts with sources, dates, confidence)
-5. Alternatives (primary / alternative / do-nothing)
-6. Economics (investment, cash, return, downside, sensitivity when applicable)
-7. Strategic fit (distribution, SEA, own hardware, AI transformation)
-8. Dissent (material advisor disagreements)
-9. Red-team findings (strongest objections + failure conditions)
-10. Compliance & approval gates (human roles; forbidden auto-actions)
-11. Execution plan (owner, milestones, metrics, review date)
-12. Stop-loss conditions
+1. 待决事项（内容 + 截止日）
+2. 建议（仅一条主建议）
+3. 为何现在（触发、紧迫性、拖延代价）
+4. 证据（带来源、日期与置信度的事实）
+5. 备选方案（主方案 / 备选 / 什么都不做）
+6. 经济性（投入、现金、回报、下行、适用时的敏感性）
+7. 战略匹配（分销、SEA、自有硬件、AI 转型）
+8. 异议（顾问间实质性分歧）
+9. 红队发现（最强反对意见 + 失败条件）
+10. 合规与审批门禁（人工角色；禁止自动执行的动作）
+11. 执行计划（负责人、里程碑、指标、复盘日）
+12. 止损条件
 
-Mark each material conclusion as: 已验证事实 / 有依据的推断 / 假设 / 建议 / 未知.
+对每条实质性结论标注：已验证事实 / 有依据的推断 / 假设 / 建议 / 未知。

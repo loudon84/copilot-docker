@@ -2,6 +2,8 @@
 
 CEO 战略办公室专家团队：1 个容器 + 1 个 root 首席幕僚 + 7 个命名顾问 Profile + Hermes Kanban + Agency Agents 动态专家池。
 
+`SOUL.md` / `AGENTS.md` / `SKILL.md`（含 root、profiles、skills、plugins）说明正文为简体中文（Profile ID、工具名等标识可英文）。
+
 PRD：[`prd/v1.8_strategic-office-team-design.md`](../../prd/v1.8_strategic-office-team-design.md)
 
 ## 团队结构

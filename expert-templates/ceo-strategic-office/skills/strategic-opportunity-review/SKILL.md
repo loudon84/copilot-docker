@@ -1,9 +1,9 @@
 ---
 name: strategic-opportunity-review
-description: Structured review of strategic opportunities against portfolio, geography, and capability fit.
+description: 对照组合、地理与能力匹配，结构化评审战略机会。
 ---
 
-# Strategic Opportunity Review
+# strategic-opportunity-review
 
-Evaluate opportunity against shared TEAM-ROSTER boundaries and DECISION-RUBRIC.
-Require evidence grades. Output feeds Kanban synthesis task for root.
+对照共享 TEAM-ROSTER 边界与 DECISION-RUBRIC 评估机会。
+要求证据等级。产出供 root 的 Kanban 综合任务使用。

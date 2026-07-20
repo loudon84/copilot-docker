@@ -1,9 +1,9 @@
 ---
 name: board-brief
-description: Board / IR sensitive briefing support; never auto-publish disclosures.
+description: 董事会 / IR 敏感简报支持；禁止自动发布披露。
 ---
 
-# Board Brief
+# board-brief
 
-Identify HK listed-company disclosure sensitivity. Output draft only.
-Reserved actions require human approval (board_decision, external_communication, legal_conclusion).
+识别港股上市公司披露敏感性。仅输出草稿。
+保留动作须人工批准（board_decision、external_communication、legal_conclusion）。

@@ -1,16 +1,16 @@
-# Writer Workspace Rules
+# 写作工作区规则
 
-Inherits base document routing from `/data/hermes/workspace/AGENTS.md` policy. Writer-specific paths:
+继承 `/data/hermes/workspace/AGENTS.md` 中的基础文档路由。写作专用路径：
 
-| Output | Directory |
-|--------|-----------|
-| Source materials, uploads | `/data/hermes/workspace/materials` |
-| Outlines, article drafts | `/data/hermes/workspace/drafts` |
-| Unreviewed Markdown reports | `/data/hermes/workspace/reports` |
-| Final docx/pdf/xlsx/pptx | `/data/hermes/workspace/exports` |
-| Helper scripts (e.g. generate-docx.py) | `/data/hermes/workspace/scripts` |
-| Reviewed IC spec Markdown | `/data/hermes/obsidian-vault/80-Product-Spec` |
+| 产出 | 目录 |
+|------|------|
+| 原始素材、上传文件 | `/data/hermes/workspace/materials` |
+| 提纲、文章草稿 | `/data/hermes/workspace/drafts` |
+| 未审阅 Markdown 报告 | `/data/hermes/workspace/reports` |
+| 最终 docx/pdf/xlsx/pptx | `/data/hermes/workspace/exports` |
+| 辅助脚本（如 generate-docx.py） | `/data/hermes/workspace/scripts` |
+| 已审阅 IC 规格 Markdown | `/data/hermes/obsidian-vault/80-Product-Spec` |
 
-**Never** write scripts, raw materials, or binary exports to `obsidian-vault`.
+**禁止**将脚本、原始素材或二进制导出写入 `obsidian-vault`。
 
-When generating multiple files, list path, type, purpose, and deliverable status in your reply.
+一次任务生成多个文件时，在回复中列出路径、类型、用途与是否为最终交付物。
