@@ -84,6 +84,15 @@ if [ -f "$DATA_DIR/config.yaml" ]; then
     warn "修复: python3 scripts/lib/enable_finance_bi_plugin.py --config instances/$PROFILE/data/hermes/config.yaml"
     warn "或: docker exec -it $CONTAINER hermes plugins enable hermes-finance-bi-plugin"
   fi
+  # If platform_toolsets is a restrictive allow-list, finance-bi must be listed
+  if grep -qE '^platform_toolsets:' "$DATA_DIR/config.yaml"; then
+    if grep -A40 -E '^platform_toolsets:' "$DATA_DIR/config.yaml" | grep -qE 'finance-bi'; then
+      pass "platform_toolsets includes finance-bi"
+    else
+      fail "platform_toolsets 存在但未包含 finance-bi（白名单会挡住工具）"
+      warn "修复: python3 scripts/lib/enable_finance_bi_plugin.py --config instances/$PROFILE/data/hermes/config.yaml && restart"
+    fi
+  fi
 else
   fail "config.yaml missing"
 fi

@@ -269,6 +269,15 @@ plugins:
     - hermes-finance-bi-plugin
 ```
 
+若存在 `platform_toolsets`（白名单），还必须包含 `finance-bi`，例如：
+
+```yaml
+platform_toolsets:
+  cli:
+    - browser
+    - finance-bi          # 必需，否则 tools 列表看不到 finance_bi_*
+```
+
 实例名可为任意 profile（如 `financial-analysis`），专家模板仍是 `bi-strategic-office`：
 
 ```bash

@@ -49,12 +49,19 @@ def ensure_enabled(config: dict[str, Any], plugin_name: str, toolset: str) -> di
 
     # Append toolset to any existing platform_toolsets lists (do not create
     # a sparse map that would wipe default toolsets).
+    changed_platforms: list[str] = []
     platform_toolsets = config.get("platform_toolsets")
     if isinstance(platform_toolsets, dict):
-        for _platform, tools in platform_toolsets.items():
+        for platform, tools in platform_toolsets.items():
             if isinstance(tools, list) and toolset not in tools:
                 tools.append(toolset)
+                changed_platforms.append(str(platform))
 
+    config["_bi_enable_meta"] = {
+        "plugin": plugin_name,
+        "toolset": toolset,
+        "platform_toolsets_updated": changed_platforms,
+    }
     return config
 
 
@@ -75,11 +82,19 @@ def main() -> int:
         return 1
 
     ensure_enabled(data, args.plugin, args.toolset)
+    meta = data.pop("_bi_enable_meta", {})
     args.config.write_text(
         yaml.safe_dump(data, allow_unicode=True, sort_keys=False),
         encoding="utf-8",
     )
     print(f"[bi] ensured plugins.enabled contains {args.plugin}")
+    updated = meta.get("platform_toolsets_updated") or []
+    if updated:
+        print(f"[bi] appended {args.toolset} to platform_toolsets: {', '.join(updated)}")
+    elif isinstance(data.get("platform_toolsets"), dict) and data["platform_toolsets"]:
+        print(f"[bi] platform_toolsets already include {args.toolset} (or no list entries)")
+    else:
+        print("[bi] no platform_toolsets map present (plugin enable alone is enough if Hermes uses defaults)")
     return 0
 
 
