@@ -1,0 +1,13 @@
+question: 查询2026Q2各产品销售利润报表
+expected:
+  dataset: product_profit_daily
+  metrics:
+    - net_sales_amount
+    - gross_profit_amount
+    - gross_margin
+  dimensions:
+    - product_code
+    - product_name
+  time_range:
+    gte: "2026-04-01"
+    lt: "2026-07-01"

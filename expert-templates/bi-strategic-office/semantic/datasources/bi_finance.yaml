@@ -1,0 +1,7 @@
+id: bi_finance
+name: BI Finance Readonly
+dialect: postgresql
+schemas:
+  - bi_finance
+  - bi_sales
+description: Read-only BI warehouse for operating analytics.

@@ -87,6 +87,24 @@ bash scripts/check-expert-team.sh ceo-office ceo-strategic-office
 - 现有 `writer` / `finance` / `sale` 单专家行为不变
 - 单元与工作流测试：`python -m pytest tests/test_team_manifest.py tests/test_patch_config_runtime.py tests/test_inject_expert_team.py tests/test_ceo_team_workflows.py -q`
 
+## 财务经营分析办公室（BI 智能问数）
+
+PRD v1.9：单专家实例 + 进程内插件 `hermes-finance-bi-plugin`（语义目录 → SemanticQuery → 确定性 SQL → 只读库）。与 `finance`（资金运营）职责分离。
+
+```bash
+bash scripts/validate-expert-template.sh bi-strategic-office
+bash scripts/create-instance.sh bi-strategic-office 8790 bi-strategic-office
+# 编辑 instances/bi-strategic-office/.env，配置只读 FINANCE_BI_DSN
+bash scripts/up-instance.sh bi-strategic-office
+bash scripts/check-finance-bi.sh bi-strategic-office
+```
+
+- 模板：`expert-templates/bi-strategic-office/`（skills / semantic / policies）
+- 插件：`asset-bundles/hermes-finance-bi-plugin/`
+- 同步语义目录：`bash scripts/sync-bi-semantic-catalog.sh bi-strategic-office`
+- 单测：`python -m pytest tests/test_finance_bi_plugin.py tests/test_bi_strategic_office_inject.py -q`
+- 不新增独立查询服务、容器或端口；禁止注册原始 SQL Tool
+
 ## 推送到火山引擎（nodeskclaw）
 
 ```bash
@@ -124,6 +142,7 @@ bash scripts/doctor-local-registry.sh
 │   ├── writer/
 │   ├── finance/
 │   ├── sale/
+│   ├── bi-strategic-office/    # 财务 BI 问数（PRD v1.9）
 │   └── ceo-strategic-office/   # Profile Team（PRD v1.8）
 └── instances/
     ├── writer/
@@ -132,6 +151,11 @@ bash scripts/doctor-local-registry.sh
     ├── finance/
     │   ├── .env
     │   └── data/hermes/
+    ├── bi-strategic-office/
+    │   ├── .env                # 含 FINANCE_BI_*（勿提交真实 DSN）
+    │   └── data/hermes/
+    │       ├── finance-bi/     # semantic / policies / state
+    │       └── plugins/hermes-finance-bi-plugin/
     └── ceo-office/             # 团队实例示例
         ├── .env
         └── data/hermes/

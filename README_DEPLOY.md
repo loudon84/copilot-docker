@@ -400,6 +400,35 @@ bash scripts/check-sale-expert.sh sale
 
 详见 [docs/sale-expert.md](docs/sale-expert.md)。
 
+## 10.2 新增 bi-strategic-office（财务 BI 问数）
+
+PRD：`prd/v1.9_strategic-office-finance-bi.md`
+
+```bash
+bash scripts/validate-expert-template.sh bi-strategic-office
+bash scripts/create-instance.sh bi-strategic-office 8790 bi-strategic-office
+# 配置只读库（勿提交密码）
+# FINANCE_BI_DSN=postgresql+psycopg://readonly:...@host:5432/bi
+# FINANCE_BI_ALLOWED_ENTITIES=HK01
+bash scripts/sync-runtime-env.sh bi-strategic-office
+bash scripts/up-instance.sh bi-strategic-office
+bash scripts/check-finance-bi.sh bi-strategic-office
+```
+
+要点：
+
+- 插件目录：`instances/<profile>/data/hermes/plugins/hermes-finance-bi-plugin/`
+- 语义目录：`.../finance-bi/semantic/`（由模板同步）
+- 导出目录：`.../workspace/exports/bi/`
+- 与 `finance` 专家边界：资金运营归 finance；BI 取数/利润分析/口径解释归 bi-strategic-office
+- 安全：只读账号、SQL AST 白名单、主体过滤；禁止任意 SQL Tool
+
+本地单测（SQLite fixture，不连生产库）：
+
+```bash
+python -m pytest tests/test_finance_bi_plugin.py tests/test_bi_strategic_office_inject.py -q
+```
+
 ## 11. 停止实例
 
 ```bash

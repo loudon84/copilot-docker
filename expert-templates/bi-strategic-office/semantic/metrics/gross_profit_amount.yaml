@@ -1,0 +1,16 @@
+id: gross_profit_amount
+name: 销售毛利
+aliases:
+  - 毛利
+  - 销售利润
+  - 毛利额
+description: 净销售额减去销售成本。注意：经营利润是另一指标，本 MVP 未启用。
+expression: SUM(gross_profit_amount)
+aggregation: sum
+currency_aware: true
+format: amount
+version: 1
+datasets:
+  - product_profit_daily
+ambiguous_with:
+  - operating_profit

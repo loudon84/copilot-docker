@@ -161,6 +161,11 @@ RUN echo "PIP_INDEX_URL=${PIP_INDEX_URL}" \
   "exa-py==2.10.2" \
   "firecrawl-py==4.17.0" \
   "parallel-web==0.4.2" \
+  "sqlalchemy>=2.0,<3" \
+  "psycopg[binary]>=3.1,<4" \
+  "sqlglot>=25.0,<28" \
+  "openpyxl>=3.1,<4" \
+  "PyYAML>=6.0,<7" \
   && /app/venv/bin/python - <<'PY'
 from run_agent import AIAgent
 print("OK: hermes-agent AIAgent importable from /app/venv")

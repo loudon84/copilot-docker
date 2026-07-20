@@ -1,0 +1,18 @@
+version: 1
+allowed_statement_types:
+  - select
+  - with
+forbid_multi_statement: true
+forbid_ddl: true
+forbid_dml: true
+require_limit: true
+default_limit: 200
+hard_limit: 5000
+query_timeout_seconds: 30
+inject_entity_filter: true
+entity_field: entity_code
+mask_sensitive_dimensions:
+  - customer_name
+  - customer_code
+retain_query_state_days: 7
+export_dir: /data/hermes/workspace/exports/bi

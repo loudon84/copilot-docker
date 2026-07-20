@@ -1,0 +1,14 @@
+id: gross_margin
+name: 毛利率
+aliases:
+  - 毛利率
+  - gross margin
+description: 聚合后毛利 / 聚合后净销售额
+expression: SUM(gross_profit_amount) / NULLIF(SUM(net_sales_amount), 0)
+aggregation: ratio
+currency_aware: false
+format: percent
+version: 1
+datasets:
+  - product_profit_daily
+compute_after_aggregate: true

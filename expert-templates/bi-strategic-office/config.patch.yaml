@@ -1,0 +1,17 @@
+agent:
+  max_turns: 40
+  gateway_timeout: 600
+
+delegation:
+  max_iterations: 20
+  max_concurrent_children: 3
+  max_spawn_depth: 1
+  orchestrator_enabled: true
+
+display:
+  language: zh
+  tool_progress: all
+  show_reasoning: false
+
+memory:
+  nudge_interval: 0

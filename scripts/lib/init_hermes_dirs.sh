@@ -16,10 +16,17 @@ init_hermes_dirs() {
     "$DATA_DIR/workspace/drafts" \
     "$DATA_DIR/workspace/reports" \
     "$DATA_DIR/workspace/exports" \
+    "$DATA_DIR/workspace/exports/bi" \
+    "$DATA_DIR/workspace/drafts/bi" \
+    "$DATA_DIR/workspace/reports/bi" \
     "$DATA_DIR/workspace/artifacts" \
     "$DATA_DIR/workspace/scripts" \
     "$DATA_DIR/workspace/runtime" \
     "$DATA_DIR/workspace/tmp" \
+    "$DATA_DIR/finance-bi" \
+    "$DATA_DIR/finance-bi/semantic" \
+    "$DATA_DIR/finance-bi/policies" \
+    "$DATA_DIR/finance-bi/state" \
     "$DATA_DIR/obsidian-vault" \
     "$DATA_DIR/obsidian-vault/00-Inbox" \
     "$DATA_DIR/obsidian-vault/10-Articles" \
