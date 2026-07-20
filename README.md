@@ -25,6 +25,10 @@ bash scripts/create-instance.sh finance 8788 finance
 bash scripts/up-instance.sh finance
 bash scripts/create-instance.sh sale 9602 sale
 bash scripts/up-instance.sh sale
+bash scripts/create-instance.sh bi-strategic-office 8790 bi-strategic-office
+# 配置 instances/bi-strategic-office/.env 中只读 FINANCE_BI_DSN 后：
+bash scripts/sync-runtime-env.sh bi-strategic-office
+bash scripts/up-instance.sh bi-strategic-office
 ```
 
 访问：
@@ -33,6 +37,7 @@ bash scripts/up-instance.sh sale
 http://服务器IP:8787  # writer
 http://服务器IP:8788  # finance
 http://服务器IP:9602  # sale
+http://服务器IP:8790  # bi-strategic-office（财务 BI）
 ```
 
 查看密码：
@@ -40,8 +45,8 @@ http://服务器IP:9602  # sale
 ```bash
 cat instances/writer/.env | grep HERMES_WEBUI_PASSWORD
 cat instances/finance/.env | grep HERMES_WEBUI_PASSWORD
+cat instances/bi-strategic-office/.env | grep HERMES_WEBUI_PASSWORD
 ```
-
 ## 镜像构建与国内镜像源
 
 构建参数（apt / pip / npm 镜像）在 `instances/<profile>/.env` 中配置，详见 [docs/build-image.md](docs/build-image.md)。
@@ -89,21 +94,212 @@ bash scripts/check-expert-team.sh ceo-office ceo-strategic-office
 
 ## 财务经营分析办公室（BI 智能问数）
 
-PRD v1.9：单专家实例 + 进程内插件 `hermes-finance-bi-plugin`（语义目录 → SemanticQuery → 确定性 SQL → 只读库）。与 `finance`（资金运营）职责分离。
+PRD：[`prd/v1.9_strategic-office-finance-bi.md`](prd/v1.9_strategic-office-finance-bi.md)
+
+单专家实例 + 进程内插件 `hermes-finance-bi-plugin`（语义目录 → `SemanticQuery` → 确定性 SQL → 只读库）。**不**新增独立查询服务、容器或端口；**禁止**注册原始 SQL Tool。
+
+与现有 `finance` 专家边界：
+
+| 专家 | 职责 |
+|------|------|
+| `finance` | 账户、账龄、回款、头寸、资金计划、财务运营 |
+| `bi-strategic-office` | BI 取数、经营分析、产品/客户/区域利润、同比环比、指标口径、管理报告 |
+
+### 交付内容
+
+| 路径 | 说明 |
+|------|------|
+| `expert-templates/bi-strategic-office/` | 专家模板：`SOUL.md`、`config.patch.yaml`、skills、semantic、policies |
+| `expert-templates/bi-strategic-office/skills/` | 编排 / 问数 / 绩效分析 / 语义治理 / 质量检查 / 管理报告 |
+| `expert-templates/bi-strategic-office/semantic/` | MVP 语义目录（datasets / metrics / dimensions / glossary / examples） |
+| `asset-bundles/hermes-finance-bi-plugin/` | Hermes 插件源码包（toolset `finance-bi`） |
+| `scripts/inject-expert.sh` | 注入时自动合并 patch、同步 semantic、安装插件、追加 `FINANCE_BI_*` |
+| `scripts/sync-bi-semantic-catalog.sh` | 模板 semantic/policies → 实例 `finance-bi/` |
+| `scripts/check-finance-bi.sh` | 插件 / 工具 / 语义目录 / 导出目录 / 环境变量诊断 |
+| `scripts/validate-expert-template.sh` | 模板结构校验 |
+| `scripts/lib/merge_config_patch.py` | `config.patch.yaml` 深度合并（保留 `model`/`providers`） |
+| `.env.example` | `FINANCE_BI_*` 配置样例（勿填生产密码） |
+| `Dockerfile` | 已固化 sqlalchemy / sqlglot / openpyxl / PyYAML / psycopg |
+| `tests/test_finance_bi_plugin.py` | SQLite fixture 单测（不连生产库） |
+| `tests/test_bi_strategic_office_inject.py` | 注入幂等与 doctor 验收 |
+
+插件六工具：
+
+```text
+finance_bi_ask
+finance_bi_followup
+finance_bi_explain
+finance_bi_catalog_search
+finance_bi_validate_result
+finance_bi_export_result
+```
+
+运行时目录（注入后）：
+
+```text
+instances/bi-strategic-office/
+├── .env                          # FINANCE_BI_*（勿提交真实 DSN）
+└── data/hermes/
+    ├── SOUL.md
+    ├── skills/
+    ├── finance-bi/
+    │   ├── semantic/             # 语义目录
+    │   ├── policies/
+    │   └── state/finance_bi.db   # 查询状态与审计（不含结果集）
+    ├── plugins/hermes-finance-bi-plugin/
+    └── workspace/exports/bi/     # CSV / XLSX 导出
+```
+
+### Docker 部署步骤
+
+前提：已安装 Docker / Compose，仓库在目标机可访问（与 writer/finance 相同）。
+
+**1. 构建共享镜像（全实例只需一次）**
+
+```bash
+cd /opt/hermes-agent-webui   # 或本仓库根目录
+bash scripts/build-image.sh
+# 若镜像已含 finance-bi 依赖可跳过；新代码/新依赖建议：
+# bash scripts/build-image.sh --no-cache
+```
+
+**2. 校验模板**
 
 ```bash
 bash scripts/validate-expert-template.sh bi-strategic-office
-bash scripts/create-instance.sh bi-strategic-office 8790 bi-strategic-office
-# 编辑 instances/bi-strategic-office/.env，配置只读 FINANCE_BI_DSN
-bash scripts/up-instance.sh bi-strategic-office
-bash scripts/check-finance-bi.sh bi-strategic-office
 ```
 
-- 模板：`expert-templates/bi-strategic-office/`（skills / semantic / policies）
-- 插件：`asset-bundles/hermes-finance-bi-plugin/`
-- 同步语义目录：`bash scripts/sync-bi-semantic-catalog.sh bi-strategic-office`
-- 单测：`python -m pytest tests/test_finance_bi_plugin.py tests/test_bi_strategic_office_inject.py -q`
-- 不新增独立查询服务、容器或端口；禁止注册原始 SQL Tool
+**3. 创建实例并注入专家**
+
+```bash
+# 参数：<profile> <webui_port> <expert>
+# Gateway 宿主机端口 = 20000 + webui_port（例：8790 → 28790）
+bash scripts/create-instance.sh bi-strategic-office 8790 bi-strategic-office
+```
+
+`create-instance.sh` 会调用 `inject-expert.sh`，自动完成：模板复制、语义同步、插件安装、`FINANCE_BI_*` 占位写入。
+
+**4. 配置只读 BI 数据源**
+
+编辑 `instances/bi-strategic-office/.env`（**勿提交真实密码**）：
+
+```env
+FINANCE_BI_DSN=postgresql+psycopg://readonly_user:PASSWORD@db-host:5432/bi_db
+FINANCE_BI_DIALECT=postgresql
+FINANCE_BI_CATALOG_PATH=/data/hermes/finance-bi/semantic
+FINANCE_BI_POLICY_PATH=/data/hermes/finance-bi/policies
+FINANCE_BI_ALLOWED_SCHEMAS=bi_finance,bi_sales
+FINANCE_BI_ALLOWED_ENTITIES=HK01
+FINANCE_BI_DEFAULT_CURRENCY=HKD
+FINANCE_BI_TIMEZONE=Asia/Hong_Kong
+FINANCE_BI_QUERY_TIMEOUT_SECONDS=30
+FINANCE_BI_DEFAULT_LIMIT=200
+FINANCE_BI_HARD_LIMIT=5000
+FINANCE_BI_STATE_DB=/data/hermes/finance-bi/state/finance_bi.db
+FINANCE_BI_EXPORT_DIR=/data/hermes/workspace/exports/bi
+```
+
+同步到容器内 Hermes 可读的 `data/hermes/.env`：
+
+```bash
+bash scripts/sync-runtime-env.sh bi-strategic-office
+```
+
+说明：
+
+- 数据库账号必须为**只读**
+- `FINANCE_BI_ALLOWED_ENTITIES` 为实例级主体白名单（MVP 全实例共享同一权限）
+- 本地联调可用 SQLite：`FINANCE_BI_DIALECT=sqlite` + `FINANCE_BI_DSN=sqlite:////data/hermes/finance-bi/state/demo.db`（需自备表结构）
+
+**5. 启动容器**
+
+```bash
+bash scripts/up-instance.sh bi-strategic-office
+```
+
+访问：
+
+```text
+WebUI:  http://服务器IP:8790
+API:    http://服务器IP:28790   # HERMES_GATEWAY_PORT = 20000 + 8790
+```
+
+查看密码：
+
+```bash
+grep HERMES_WEBUI_PASSWORD instances/bi-strategic-office/.env
+```
+
+**6. 健康检查**
+
+```bash
+bash scripts/check-finance-bi.sh financial-analysis   # 或 bi-strategic-office
+```
+
+常见输出说明：
+
+| 输出 | 含义 | 处理 |
+|------|------|------|
+| `WARN: FINANCE_BI_DSN is empty` | 尚未配置只读库，**结构检查仍可通过** | 编辑 `.env` 填 DSN → `sync-runtime-env` → `restart-instance` |
+| `PASS: semantic catalog loads` | 语义 YAML 正常 | 无需处理 |
+| `WARN: … plugins list did not …` / `plugin code loads … CLI did not list` | 文件已就位，但 Hermes CLI 尚未列出工具 | 重新 inject + restart，再用 `hermes tools --summary \| grep finance_bi` 确认 |
+
+实例名可为任意 profile（如 `financial-analysis`），专家模板仍是 `bi-strategic-office`：
+
+```bash
+bash scripts/inject-expert.sh financial-analysis bi-strategic-office
+bash scripts/sync-runtime-env.sh financial-analysis
+bash scripts/restart-instance.sh financial-analysis
+bash scripts/check-finance-bi.sh financial-analysis
+
+docker exec hermes-financial-analysis hermes tools --summary | grep finance_bi
+docker exec hermes-financial-analysis hermes plugins list
+```
+
+配置 DSN 示例（写入 `instances/financial-analysis/.env`）：
+
+```env
+FINANCE_BI_DSN=postgresql+psycopg://readonly_user:PASSWORD@db-host:5432/bi_db
+FINANCE_BI_ALLOWED_ENTITIES=HK01
+```
+
+然后：
+
+```bash
+bash scripts/sync-runtime-env.sh financial-analysis
+bash scripts/restart-instance.sh financial-analysis
+```
+
+**7. 日常运维**
+
+```bash
+# 更新模板 / 语义目录 / 插件后重新注入（幂等）
+bash scripts/inject-expert.sh bi-strategic-office bi-strategic-office
+bash scripts/sync-bi-semantic-catalog.sh bi-strategic-office
+bash scripts/sync-runtime-env.sh bi-strategic-office
+bash scripts/restart-instance.sh bi-strategic-office
+
+# 仅同步语义 YAML
+bash scripts/sync-bi-semantic-catalog.sh bi-strategic-office
+
+# 停止
+bash scripts/down-instance.sh bi-strategic-office
+```
+
+**8. 本地单测（不依赖生产库 / 可不启容器）**
+
+```bash
+python -m pytest tests/test_finance_bi_plugin.py tests/test_bi_strategic_office_inject.py -q
+```
+
+### 安全约束（部署必读）
+
+- 禁止向 Hermes 注册 `execute_sql` / `run_raw_sql` / `query_database`
+- 查询经 SQL AST 校验：仅 SELECT/WITH、强制 LIMIT、schema/表白名单、主体过滤
+- 审计库不保存完整结果集与数据库密码
+- 未接入用户级动态权限前：勿作多租户公网服务、勿配置全公司无限制账号
+
+更细的部署清单见 [README_DEPLOY.md §10.2](README_DEPLOY.md)。
 
 ## 推送到火山引擎（nodeskclaw）
 

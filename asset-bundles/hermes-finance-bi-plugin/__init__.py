@@ -5,13 +5,14 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-# Hermes loads plugins by path; ensure nested `finance_bi` package is importable.
+# Plugin directory name may contain hyphens (invalid as a Python package name).
+# Always put this directory on sys.path and use absolute imports.
 _ROOT = Path(__file__).resolve().parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-from . import schemas
-from .finance_bi.handlers import tools as handlers
+import schemas
+from finance_bi.handlers import tools as handlers
 
 
 def register(ctx):

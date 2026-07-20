@@ -114,8 +114,15 @@ import sys
 from pathlib import Path
 plugin = Path(r"$PLUGIN_DIR")
 sys.path.insert(0, str(plugin))
-spec = importlib.util.spec_from_file_location("hermes_finance_bi_plugin", plugin / "__init__.py")
+# Load as a package (submodule_search_locations) so nested modules resolve;
+# __init__.py itself uses absolute imports after sys.path bootstrap.
+spec = importlib.util.spec_from_file_location(
+    "hermes_finance_bi_plugin",
+    plugin / "__init__.py",
+    submodule_search_locations=[str(plugin)],
+)
 mod = importlib.util.module_from_spec(spec)
+sys.modules["hermes_finance_bi_plugin"] = mod
 spec.loader.exec_module(mod)
 assert callable(getattr(mod, "register", None)), "register() missing"
 print("register_ok")
@@ -154,10 +161,17 @@ if docker inspect "$CONTAINER" >/dev/null 2>&1; then
       export PYTHONPATH=/data/hermes/plugins/hermes-finance-bi-plugin
       /app/venv/bin/python - <<EOF
 import importlib.util
+import sys
 from pathlib import Path
-p = Path("/data/hermes/plugins/hermes-finance-bi-plugin/__init__.py")
-spec = importlib.util.spec_from_file_location("hermes_finance_bi_plugin", p)
+plugin = Path("/data/hermes/plugins/hermes-finance-bi-plugin")
+sys.path.insert(0, str(plugin))
+spec = importlib.util.spec_from_file_location(
+    "hermes_finance_bi_plugin",
+    plugin / "__init__.py",
+    submodule_search_locations=[str(plugin)],
+)
 mod = importlib.util.module_from_spec(spec)
+sys.modules["hermes_finance_bi_plugin"] = mod
 spec.loader.exec_module(mod)
 assert callable(mod.register)
 print("container_register_ok")
