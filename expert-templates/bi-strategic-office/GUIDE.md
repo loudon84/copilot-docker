@@ -62,7 +62,7 @@
 | 区域 | 业务含义 |
 |------|----------|
 | `finance-bi/semantic/` | **语义目录**：登记了「有哪些报表数据集、指标叫什么、怎么算、有哪些维度」。业务口径变更时，由数据/财务 IT 维护这里的定义，而不是改聊天话术。 |
-| `finance-bi/policies/` | **查询策略**：行数上限、超时、脱敏等安全与成本规则。 |
+| `finance-bi/policies/` | **查询策略**：行数上限、超时等安全与成本规则（问数默认不脱敏客户字段）。 |
 | `finance-bi/state/` | **查询状态与审计**：记住上一轮问数编号，便于「接着筛」；审计不保存完整结果明细。 |
 | `plugins/hermes-finance-bi-plugin/` | **问数插件**：真正执行 ask / 下钻 / 解释 / 导出的能力。 |
 | `workspace/exports/bi/` | **导出文件**：你要求导出的 CSV / Excel 落在这里，便于下载或二次加工。 |
@@ -76,7 +76,7 @@
 | 层级 | 路径 | 谁维护 | 做什么 |
 |------|------|--------|--------|
 | **源配置（应改这里）** | `expert-templates/bi-strategic-office/semantic/` | 数据 / 财务 IT | 数据集、指标、维度、术语、示例 YAML |
-| **源配置（应改这里）** | `expert-templates/bi-strategic-office/policies/` | 数据 / 财务 IT | 如 `query-policy.yaml`（行数上限、超时、脱敏等） |
+| **源配置（应改这里）** | `expert-templates/bi-strategic-office/policies/` | 数据 / 财务 IT | 如 `query-policy.yaml`（行数上限、超时等） |
 | **运行时（自动安装结果）** | `instances/<实例名>/data/hermes/finance-bi/semantic/` | 一般不手改 | 插件实际读取的语义目录 |
 | **运行时（自动安装结果）** | `instances/<实例名>/data/hermes/finance-bi/policies/` | 一般不手改 | 插件实际读取的策略 |
 

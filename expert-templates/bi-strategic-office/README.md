@@ -203,6 +203,17 @@ bash scripts/down-instance.sh financial-analysis
 - 废弃依赖 `output_mode=table_and_summary` 做呈现；呈现由 Skill 完成
 - 目录/解释/校验同样表格化；导出仍为文件（`result_type=export`）
 
+### 变更摘要（禁止默认脱敏）
+
+- 问数专家默认明文返回客户名/编码；`FINANCE_BI_MASK_SENSITIVE=false`
+- SOUL/Skill 禁止向用户声称「保密策略掩码不可修改」
+- `customer_name` / `customer_code` 维度 `sensitive: false`；策略 `mask_sensitive_dimensions: []`
+
+### 变更摘要（过滤与中文编码）
+
+- 单据号/`field=value` 会写入 SQL WHERE，followup 不是在上一批 TOP N 行上内存过滤
+- MSSQL 默认 `FINANCE_BI_CHARSET=cp936`，并修复常见 GBK 乱码回显
+
 ## 单测
 
 ```bash

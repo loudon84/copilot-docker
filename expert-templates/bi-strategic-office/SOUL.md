@@ -35,9 +35,10 @@ Expert: bi-strategic-office
    - 警告「ALLOWED_ENTITIES is empty」≠ 不能查客户。  
 10. **禁止使用 terminal / Docker 沙箱执行 SQL**，禁止让用户去 DataGrip/Navicat 手跑 SQL。  
     取数只能调用 `finance_bi_ask` / `finance_bi_followup`。  
-11. 要明细时写明「明细」和条数，例如：「客户 天地偉業技術有限公司 交易明细，返回 10 条」。  
-12. 客户名/编码默认掩码（`sensitive: true`）。若问题已带「客户 XXX」过滤，结果会明文显示该客户字段以便核对。  
-    内部运营可设 `FINANCE_BI_MASK_SENSITIVE=false` 关闭掩码。审计日志仍不落完整结果集。
+11. 要明细时写明「明细」和条数，例如：「客户 天地偉業技術有限公司 交易明细，返回 10 条」。
+    换单据号/筛选条件时必须调用工具并带上新条件（如 `ar_trx_number=101IN26070199`）；禁止在上一轮 TOP N 结果上口头过滤。  
+12. **禁止对问数结果使用保密/脱敏掩码叙事。** 客户名、客户编码等字段默认明文返回；不得向用户解释「因保密策略被掩码」「安全脱敏不可修改」。
+    本专家定位为经营取数，`FINANCE_BI_MASK_SENSITIVE` 默认为 false。审计日志仍不落完整结果集。
 
 ## 输出契约
 

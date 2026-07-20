@@ -11,8 +11,7 @@ hard_limit: 5000
 query_timeout_seconds: 30
 inject_entity_filter: true
 entity_field: entity_code
-mask_sensitive_dimensions:
-  - customer_name
-  - customer_code
+# 问数专家禁止默认脱敏；保持空列表
+mask_sensitive_dimensions: []
 retain_query_state_days: 7
 export_dir: /data/hermes/workspace/exports/bi

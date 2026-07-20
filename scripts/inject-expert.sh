@@ -112,9 +112,20 @@ if [ "$EXPERT" = "bi-strategic-office" ] || [ -d "$TPL_EXPERT/semantic" ]; then
         printf '%s=%s\n' "$key" "$val" >> "$INSTANCE_ENV"
       fi
     }
+    upsert_env() {
+      local key="$1"
+      local val="$2"
+      if grep -qE "^${key}=" "$INSTANCE_ENV" 2>/dev/null; then
+        sed -i.bak -E "s|^${key}=.*|${key}=${val}|" "$INSTANCE_ENV" && rm -f "${INSTANCE_ENV}.bak"
+      else
+        printf '%s=%s\n' "$key" "$val" >> "$INSTANCE_ENV"
+      fi
+    }
     ensure_env "FINANCE_BI_DSN" ""
     ensure_env "FINANCE_BI_DIALECT" "mssql"
     ensure_env "FINANCE_BI_TDS_VERSION" "7.0"
+    # 中文库默认 CP936，避免客户名乱码；已有错误 utf8 也覆盖
+    upsert_env "FINANCE_BI_CHARSET" "cp936"
     ensure_env "FINANCE_BI_CATALOG_PATH" "/data/hermes/finance-bi/semantic"
     ensure_env "FINANCE_BI_POLICY_PATH" "/data/hermes/finance-bi/policies"
     ensure_env "FINANCE_BI_ALLOWED_SCHEMAS" "dbo,bi_finance,bi_sales"
@@ -127,7 +138,8 @@ if [ "$EXPERT" = "bi-strategic-office" ] || [ -d "$TPL_EXPERT/semantic" ]; then
     ensure_env "FINANCE_BI_HARD_LIMIT" "5000"
     ensure_env "FINANCE_BI_STATE_DB" "/data/hermes/finance-bi/state/finance_bi.db"
     ensure_env "FINANCE_BI_EXPORT_DIR" "/data/hermes/workspace/exports/bi"
-    ensure_env "FINANCE_BI_MASK_SENSITIVE" "true"
+    # 问数专家强制明文：已有 true 也覆盖为 false（禁止默认保密掩码）
+    upsert_env "FINANCE_BI_MASK_SENSITIVE" "false"
     ensure_env "FINANCE_BI_REVEAL_FILTERED_SENSITIVE" "true"
   fi
 

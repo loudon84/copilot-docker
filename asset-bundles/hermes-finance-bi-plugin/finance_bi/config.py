@@ -47,10 +47,12 @@ class FinanceBiConfig:
     state_db: str = "/data/hermes/finance-bi/state/finance_bi.db"
     export_dir: str = "/data/hermes/workspace/exports/bi"
     retain_days: int = 7
-    # Mask sensitive dimensions (customer_*) in table output. Set false for internal BI operators.
-    mask_sensitive: bool = True
-    # When true, fields already constrained by query filters are shown in clear text.
+    # BI 问数默认明文返回客户等字段；仅在显式开启时才脱敏。
+    mask_sensitive: bool = False
+    # When mask_sensitive=true, fields already constrained by filters can still show in clear.
     reveal_filtered_sensitive: bool = True
+    # pymssql charset for MSSQL. DW Chinese VARCHAR is typically GBK/CP936 (not utf8).
+    charset: str = "cp936"
 
     @property
     def is_mssql(self) -> bool:
@@ -84,6 +86,7 @@ class FinanceBiConfig:
                 "/data/hermes/workspace/exports/bi",
             ),
             retain_days=int(os.getenv("FINANCE_BI_RETAIN_DAYS", "7")),
-            mask_sensitive=_env_bool("FINANCE_BI_MASK_SENSITIVE", True),
+            mask_sensitive=_env_bool("FINANCE_BI_MASK_SENSITIVE", False),
             reveal_filtered_sensitive=_env_bool("FINANCE_BI_REVEAL_FILTERED_SENSITIVE", True),
+            charset=(os.getenv("FINANCE_BI_CHARSET") or "cp936").strip() or "cp936",
         )

@@ -21,8 +21,14 @@ from finance_bi.config import FinanceBiConfig  # noqa: E402
 from finance_bi.contracts import ErrorCode, FinanceBiError, SemanticQuery  # noqa: E402
 from finance_bi.handlers import reset_service  # noqa: E402
 from finance_bi.handlers import tools as tool_handlers  # noqa: E402
-from finance_bi.planner import QueryPlanner, parse_quarter_range  # noqa: E402
+from finance_bi.planner import (  # noqa: E402
+    QueryPlanner,
+    extract_field_eq_filters,
+    extract_trx_number,
+    parse_quarter_range,
+)
 from finance_bi.policy import SqlPolicy  # noqa: E402
+from finance_bi.text_codec import repair_chinese_text  # noqa: E402
 
 
 @pytest.fixture()
@@ -148,7 +154,7 @@ def bi_env(tmp_path: Path):
         state_db=str(state_db),
         export_dir=str(export_dir),
         retain_days=7,
-        mask_sensitive=True,
+        mask_sensitive=False,
         reveal_filtered_sensitive=True,
     )
     svc = reset_service(cfg)
@@ -362,3 +368,29 @@ def test_audit_has_no_result_rows(bi_env):
     cols = [r[1] for r in conn.execute("PRAGMA table_info(audit_log)").fetchall()]
     assert "rows" not in cols
     assert "result" not in cols
+
+
+def test_extract_trx_and_field_eq():
+    assert ("ar_trx_number", "101IN26070199") in extract_field_eq_filters(
+        "筛选 ar_trx_number=101IN26070199"
+    )
+    assert extract_trx_number("单据号 101IN26070199") == "101IN26070199"
+    assert extract_trx_number("101IN26070199") == "101IN26070199"
+
+
+def test_repair_gbk_mojibake():
+    bad = "有限公司".encode("gbk").decode("latin-1")
+    assert repair_chinese_text(bad) == "有限公司"
+    assert repair_chinese_text("天地偉業") == "天地偉業"
+
+
+def test_followup_eq_filter_not_memory_slice(bi_env):
+    """Follow-up must push equality into SQL filters, not keep prior TOP-10 shape only."""
+    svc = bi_env["svc"]
+    base = svc.ask("查询2026Q2各产品销售利润报表")
+    follow = svc.followup(base["query_id"], "customer_code=NO_SUCH_CODE 明细")
+    applied = (follow.get("meta") or {}).get("applied_filters") or []
+    assert any(
+        f.get("field") == "customer_code" and str(f.get("value")) == "NO_SUCH_CODE" for f in applied
+    ), applied
+    assert follow.get("row_count", 1) == 0
