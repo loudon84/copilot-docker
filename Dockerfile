@@ -163,6 +163,7 @@ RUN echo "PIP_INDEX_URL=${PIP_INDEX_URL}" \
   "parallel-web==0.4.2" \
   "sqlalchemy>=2.0,<3" \
   "psycopg[binary]>=3.1,<4" \
+  "pymssql>=2.2,<3" \
   "sqlglot>=25.0,<28" \
   "openpyxl>=3.1,<4" \
   "PyYAML>=6.0,<7" \

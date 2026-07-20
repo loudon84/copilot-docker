@@ -171,10 +171,9 @@ if docker inspect "$CONTAINER" >/dev/null 2>&1; then
     fail "container export dir not writable"
   fi
 
-  # Hermes CLI rejects pipes/non-TTY ("requires an interactive terminal").
-  # Doctor primary check: plugin register() importable in container.
-  # Optional secondary: fake a TTY via `script` then scan output.
-  if docker exec "$CONTAINER" bash -lc '
+  # Hermes CLI is /app/venv/bin/hermes (not on default PATH for bash -lc).
+  # It also rejects pipes/non-TTY — use `script` for a fake TTY.
+  if docker exec -u hermeswebui -e HERMES_HOME=/data/hermes "$CONTAINER" bash -lc '
       export PYTHONPATH=/data/hermes/plugins/hermes-finance-bi-plugin
       /app/venv/bin/python - <<EOF
 import importlib.util
@@ -199,24 +198,20 @@ EOF
     fail "plugin not importable in container"
   fi
 
-  # Optional CLI listing with fake TTY (script). Do not pipe hermes stdout directly.
   CLI_OUT="$(
-    docker exec "$CONTAINER" bash -lc '
-      if command -v script >/dev/null 2>&1; then
-        script -qfc "hermes tools --summary" /dev/null 2>/dev/null || true
-        script -qfc "hermes plugins list" /dev/null 2>/dev/null || true
-      else
-        # last resort: allocate TTY from docker (may still fail under capture)
-        true
+    docker exec -u hermeswebui -e HERMES_HOME=/data/hermes "$CONTAINER" bash -lc '
+      if command -v script >/dev/null 2>&1 && [ -x /app/venv/bin/hermes ]; then
+        script -qfc "/app/venv/bin/hermes tools --summary" /dev/null 2>/dev/null || true
+        script -qfc "/app/venv/bin/hermes plugins list" /dev/null 2>/dev/null || true
       fi
     ' 2>/dev/null || true
   )"
   if echo "$CLI_OUT" | grep -qiE 'finance_bi_ask|finance-bi|hermes-finance-bi'; then
-    pass "Hermes CLI lists finance-bi tools (via script TTY)"
+    pass "Hermes CLI lists finance-bi tools (via /app/venv/bin/hermes + script TTY)"
   else
-    warn "Hermes CLI listing skipped/unavailable (tools 需交互终端；插件 import 已通过即可)"
-    warn "人工确认: docker exec -it $CONTAINER hermes tools --summary"
-    warn "或: docker exec $CONTAINER bash -lc 'script -qfc \"hermes tools --summary\" /dev/null' | grep finance_bi"
+    warn "Hermes CLI listing empty/unavailable — use:"
+    warn "  docker exec -u hermeswebui -e HERMES_HOME=/data/hermes $CONTAINER bash -lc 'script -qfc \"/app/venv/bin/hermes tools --summary\" /dev/null' | grep finance_bi"
+    warn "  docker exec -u hermeswebui -e HERMES_HOME=/data/hermes -e HERMES_PLUGINS_DEBUG=1 $CONTAINER bash -lc 'script -qfc \"/app/venv/bin/hermes plugins list\" /dev/null' | tail -80"
   fi
 
   # Env inside Hermes home

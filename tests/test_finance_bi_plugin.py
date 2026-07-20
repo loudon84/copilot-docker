@@ -145,6 +145,20 @@ def test_plan_and_compile_q2(bi_env):
     assert "2026-04-01" in sql
 
 
+def test_mssql_compile_uses_top(bi_env):
+    cat = SemanticCatalog(Path(bi_env["cfg"].catalog_path)).load()
+    cfg = bi_env["cfg"]
+    cfg.dialect = "mssql"
+    planner = QueryPlanner(cat, cfg)
+    q = planner.plan("查询2026Q2各产品销售利润报表")
+    sql, _ = SqlCompiler(cat, cfg).compile(q)
+    assert "SELECT TOP (" in sql
+    assert "LIMIT" not in sql
+    assert "[bi_finance].[product_profit_daily]" in sql
+    tables, cols = SqlPolicy(cat, cfg).allowed_objects_for_dataset(q.dataset)
+    SqlPolicy(cat, cfg).validate(sql, tables, cols)
+
+
 def test_sql_policy_blocks_drop(bi_env):
     cat = SemanticCatalog(Path(bi_env["cfg"].catalog_path)).load()
     policy = SqlPolicy(cat, bi_env["cfg"])
