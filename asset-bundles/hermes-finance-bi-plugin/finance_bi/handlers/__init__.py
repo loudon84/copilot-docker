@@ -15,6 +15,12 @@ from finance_bi.planner import QueryPlanner
 from finance_bi.policy import SqlPolicy
 from finance_bi.repository import QueryRepository
 from finance_bi.results import normalize_result, validate_result_payload
+from finance_bi.table_result import (
+    catalog_meta_to_table,
+    dicts_to_table,
+    query_payload_to_table,
+    table_envelope,
+)
 
 _META_ASK_RE = re.compile(
     r"(有哪些数据集|哪些数据集|数据集有哪些|列出.*字段|与日期有关|日期有关|日期字段|"
@@ -54,40 +60,39 @@ class FinanceBiService:
             return True
         return False
 
-    def ask(self, question: str, output_mode: str = "table_and_summary", session_id: str = "") -> Dict[str, Any]:
+    def ask(self, question: str, output_mode: str = "table", session_id: str = "") -> Dict[str, Any]:
+        # output_mode kept for API compatibility; tools always return result_type=table.
+        _ = output_mode
         text = str(question or "").strip()
         if self._is_meta_question(text):
             payload = self.catalog.describe_report_catalog(text)
-            return {
-                "status": "ok",
-                "mode": "catalog_meta",
-                "title": text[:120],
-                "output_mode": output_mode,
-                "session_id": session_id,
-                **payload,
-                "summary": (
-                    f"找到 {len(payload.get('datasets') or [])} 个数据集，"
-                    f"{len(payload.get('date_fields') or [])} 个日期相关字段；"
-                    "本结果来自语义目录，未查询业务库。"
-                ),
-            }
+            payload["summary"] = (
+                f"找到 {len(payload.get('datasets') or [])} 个数据集，"
+                f"{len(payload.get('date_fields') or [])} 个日期相关字段；"
+                "本结果来自语义目录，未查询业务库。"
+            )
+            table = catalog_meta_to_table(payload, title=text[:120] or "语义目录")
+            table["meta"]["session_id"] = session_id
+            table["meta"]["mode"] = "catalog_meta"
+            return table
         semantic = self.planner.plan(text)
-        return self._run(semantic, session_id=session_id, output_mode=output_mode)
+        return self._run(semantic, session_id=session_id)
 
     def followup(
         self,
         base_query_id: str,
         instruction: str,
         session_id: str = "",
-        output_mode: str = "table_and_summary",
+        output_mode: str = "table",
     ) -> Dict[str, Any]:
+        _ = output_mode
         base_query_id = str(base_query_id or "").strip()
         instruction = str(instruction or "").strip()
         if not base_query_id:
             raise FinanceBiError(ErrorCode.INVALID_ARGUMENT, "base_query_id is required")
         base = self.repo.get_query(base_query_id)
         semantic = self.planner.apply_followup(base["semantic_query"], instruction)
-        return self._run(semantic, session_id=session_id, output_mode=output_mode)
+        return self._run(semantic, session_id=session_id)
 
     def explain(self, query_id: str = "", topic: str = "", metric: str = "") -> Dict[str, Any]:
         query_id = str(query_id or "").strip()
@@ -102,6 +107,7 @@ class FinanceBiService:
                 m = self.catalog.metrics.get(mid) or {}
                 metric_info.append(
                     {
+                        "object_type": "metric",
                         "id": mid,
                         "name": m.get("name"),
                         "description": m.get("description"),
@@ -110,37 +116,75 @@ class FinanceBiService:
                     }
                 )
             ds = self.catalog.datasets.get(semantic.dataset) or {}
-            return {
-                "status": "ok",
-                "query_id": query_id,
-                "dataset": {
-                    "id": semantic.dataset,
-                    "name": ds.get("name"),
-                    "primary_time_field": ds.get("primary_time_field"),
-                    "grain": ds.get("grain"),
+            date_fields = [
+                {
+                    "object_type": "date_field",
+                    "dataset": semantic.dataset,
+                    "field": f.get("field") if isinstance(f, dict) else f,
+                    "description": f.get("description") if isinstance(f, dict) else "",
+                    "is_primary_time": f.get("is_primary_time") if isinstance(f, dict) else None,
+                }
+                for f in (self.catalog.date_fields(semantic.dataset) or [])
+            ]
+            table = dicts_to_table(
+                title=f"explain:{query_id}",
+                records=metric_info or [{"object_type": "dataset", "id": semantic.dataset}],
+                result_kind="explain_query",
+                query_id=query_id,
+                meta={
+                    "dataset": {
+                        "id": semantic.dataset,
+                        "name": ds.get("name"),
+                        "primary_time_field": ds.get("primary_time_field"),
+                        "grain": ds.get("grain"),
+                    },
+                    "filters": semantic.to_dict()["filters"],
+                    "date_fields": date_fields,
+                    "currency": self.config.default_currency,
+                    "sql_compiled": stored.get("sql_text"),
+                    "tables": {"metrics": metric_info, "date_fields": date_fields},
                 },
-                "metrics": metric_info,
-                "filters": semantic.to_dict()["filters"],
-                "date_fields": self.catalog.date_fields(semantic.dataset),
-                "currency": self.config.default_currency,
-                "sql_compiled": stored.get("sql_text"),
-            }
+            )
+            return table
 
         if metric:
             mid = self.catalog.resolve_metric(metric) or metric
             m = self.catalog.metrics.get(mid)
             if not m:
                 raise FinanceBiError(ErrorCode.METRIC_NOT_FOUND, f"metric not found: {metric}")
-            return {"status": "ok", "metric": {"id": mid, **m}}
+            row = {"object_type": "metric", "id": mid, **{k: m.get(k) for k in m.keys()}}
+            # Flatten list-ish fields for tabular display
+            for key in ("aliases", "datasets", "dimensions"):
+                if isinstance(row.get(key), list):
+                    row[key] = ",".join(str(x) for x in row[key])
+            return dicts_to_table(
+                title=f"metric:{mid}",
+                records=[row],
+                result_kind="explain_metric",
+                meta={"metric_id": mid},
+            )
 
         if topic:
-            # Prefer structured report catalog for business topics
             if any(k in topic for k in ("报表", "数据集", "日期", "字段", "利润", "毛利", "目录")):
-                return {"status": "ok", "mode": "catalog_meta", **self.catalog.describe_report_catalog(topic)}
-            return {"status": "ok", "catalog": self.catalog.search(topic)}
+                return catalog_meta_to_table(
+                    self.catalog.describe_report_catalog(topic), title=topic[:120]
+                )
+            search = self.catalog.search(topic)
+            return catalog_meta_to_table(
+                {
+                    "topic": topic,
+                    "datasets": search.get("datasets") or [],
+                    "metrics": search.get("metrics") or [],
+                    "date_fields": search.get("date_fields") or [],
+                    "notes": [],
+                },
+                title=topic[:120] or "catalog search",
+            )
 
-        # empty explain -> full production catalog overview
-        return {"status": "ok", "mode": "catalog_meta", **self.catalog.describe_report_catalog("销售利润报表")}
+        return catalog_meta_to_table(
+            self.catalog.describe_report_catalog("销售利润报表"),
+            title="销售利润报表",
+        )
 
     def catalog_search(self, query: str = "", kind: str = "all") -> Dict[str, Any]:
         query = str(query or "").strip()
@@ -181,34 +225,105 @@ class FinanceBiService:
                     }
                     for ds_id, ds in self.catalog.datasets.items()
                 ]
-            return {"status": "ok", "mode": "date_fields", **payload}
+            table = catalog_meta_to_table(
+                {
+                    "topic": query or "date_fields",
+                    "datasets": payload.get("datasets") or [],
+                    "metrics": payload.get("metrics") or [],
+                    "date_fields": payload.get("date_fields") or [],
+                    "notes": [],
+                },
+                title=query[:120] or "date_fields",
+            )
+            # Prefer date_fields as primary rows when that was the ask
+            date_rows = (table.get("meta") or {}).get("tables", {}).get("date_fields") or []
+            if date_rows:
+                return dicts_to_table(
+                    title=query[:120] or "date_fields",
+                    records=date_rows,
+                    result_kind="catalog_date_fields",
+                    meta={
+                        **(table.get("meta") or {}),
+                        "mode": "date_fields",
+                    },
+                )
+            table["meta"]["mode"] = "date_fields"
+            return table
 
         if any(k in query for k in ("销售利润", "利润报表", "毛利报表", "数据集")):
-            return {"status": "ok", "mode": "catalog_meta", **self.catalog.describe_report_catalog(query)}
+            table = catalog_meta_to_table(self.catalog.describe_report_catalog(query), title=query[:120])
+            table["meta"]["mode"] = "catalog_meta"
+            return table
 
-        # Profit / margin keyword → structured catalog meta (avoids "empty arrays" UX)
         if any(k in query for k in ("毛利", "利润", "销售", "gross", "margin", "profit")):
-            return {"status": "ok", "mode": "catalog_meta", **self.catalog.describe_report_catalog(query)}
+            table = catalog_meta_to_table(self.catalog.describe_report_catalog(query), title=query[:120])
+            table["meta"]["mode"] = "catalog_meta"
+            return table
 
         payload = self.catalog.search(query, kind=kind, include_demo=False)
         empty = not any(payload.get(k) for k in ("datasets", "metrics", "dimensions", "date_fields"))
         if empty:
-            # Never return a bare empty catalog — fall back to production overview
-            return {
-                "status": "ok",
-                "mode": "catalog_meta",
-                "recovered_from_empty_search": True,
-                "original_query": query,
-                "original_kind": kind,
-                **self.catalog.describe_report_catalog(query or "销售利润报表"),
-            }
-        return {"status": "ok", **payload}
+            table = catalog_meta_to_table(
+                self.catalog.describe_report_catalog(query or "销售利润报表"),
+                title=query[:120] or "销售利润报表",
+            )
+            table["meta"]["mode"] = "catalog_meta"
+            table["meta"]["recovered_from_empty_search"] = True
+            table["meta"]["original_query"] = query
+            table["meta"]["original_kind"] = kind
+            return table
+
+        # Flatten mixed search hits into rows
+        rows: list = []
+        for ds in payload.get("datasets") or []:
+            rows.append({"object_type": "dataset", **ds})
+        for m in payload.get("metrics") or []:
+            item = {"object_type": "metric", **m}
+            for key in ("aliases", "datasets"):
+                if isinstance(item.get(key), list):
+                    item[key] = ",".join(str(x) for x in item[key])
+            rows.append(item)
+        for d in payload.get("dimensions") or []:
+            rows.append({"object_type": "dimension", **d})
+        for f in payload.get("date_fields") or []:
+            rows.append({"object_type": "date_field", **f})
+        return dicts_to_table(
+            title=query[:120] or "catalog_search",
+            records=rows,
+            result_kind="catalog_search",
+            meta={
+                "mode": "search",
+                "tables": {
+                    "datasets": payload.get("datasets") or [],
+                    "metrics": payload.get("metrics") or [],
+                    "dimensions": payload.get("dimensions") or [],
+                    "date_fields": payload.get("date_fields") or [],
+                },
+            },
+        )
 
     def validate(self, query_id: str) -> Dict[str, Any]:
-        # Re-run to obtain fresh normalized payload for checks
         stored = self.repo.get_query(query_id)
         payload = self._run(stored["semantic_query"], session_id=stored.get("session_id") or "", reuse_id=query_id)
-        return validate_result_payload(payload, self.catalog)
+        report = validate_result_payload(payload, self.catalog)
+        checks = report.get("checks") or {}
+        rows = [{"check": k, "value": v, "ok": bool(v) if isinstance(v, bool) else True} for k, v in checks.items()]
+        return table_envelope(
+            title=f"validate:{query_id}",
+            columns=[
+                {"name": "check", "label": "check", "kind": "field"},
+                {"name": "value", "label": "value", "kind": "field"},
+                {"name": "ok", "label": "ok", "kind": "field"},
+            ],
+            rows=rows,
+            result_kind="validate",
+            query_id=query_id,
+            meta={
+                "passed": report.get("passed"),
+                "checks": checks,
+            },
+            warnings=list(report.get("warnings") or []),
+        )
 
     def export(self, query_id: str, fmt: str = "csv") -> Dict[str, Any]:
         stored = self.repo.get_query(query_id)
@@ -217,23 +332,35 @@ class FinanceBiService:
             session_id=stored.get("session_id") or "",
             reuse_id=query_id,
         )
-        columns = [f["name"] for f in payload.get("fields") or []]
+        columns = [f["name"] for f in payload.get("fields") or payload.get("columns") or []]
         rows = payload.get("rows") or []
-        # export uses masked rows already — for formal export re-fetch unmasked? PRD says mask sensitive in audit;
-        # export of current result uses normalized (masked) rows for customer fields.
-        return export_result(
+        exported = export_result(
             config=self.config,
             query_id=query_id,
             columns=columns,
             rows=rows,
             fmt=fmt,
         )
+        # File export is not a data table; keep path metadata but preserve row_count.
+        return {
+            **exported,
+            "result_type": "export",
+            "result_kind": "file",
+            "columns": [{"name": c, "label": c, "kind": "field"} for c in columns],
+            "fields": [{"name": c, "label": c, "kind": "field"} for c in columns],
+            "rows": [],
+            "meta": {
+                "path": exported.get("path"),
+                "format": exported.get("format") or fmt,
+                "source_row_count": exported.get("row_count") or len(rows),
+                "query_id": query_id,
+            },
+        }
 
     def _run(
         self,
         semantic: SemanticQuery,
         session_id: str = "",
-        output_mode: str = "table_and_summary",
         reuse_id: str = "",
     ) -> Dict[str, Any]:
         sql, warnings = self.compiler.compile(semantic)
@@ -256,19 +383,20 @@ class FinanceBiService:
                 warnings=warnings,
                 elapsed_ms=elapsed_ms,
             )
-            payload["output_mode"] = output_mode
+            table = query_payload_to_table(payload)
+            table["meta"]["session_id"] = session_id
             self.repo.audit(
                 query_id=query_id,
                 session_id=session_id,
                 semantic=semantic,
                 sql_text=sql,
                 fields=columns,
-                entity_scope=payload.get("entity_scope") or [],
+                entity_scope=(table.get("meta") or {}).get("entity_scope") or [],
                 elapsed_ms=elapsed_ms,
                 row_count=len(rows),
                 status="ok",
             )
-            return payload
+            return table
         except FinanceBiError as exc:
             self.repo.audit(
                 query_id=query_id,

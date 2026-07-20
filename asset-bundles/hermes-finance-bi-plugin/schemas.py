@@ -2,8 +2,9 @@ ASK = {
     "name": "finance_bi_ask",
     "description": (
         "Run a natural-language financial BI query through the semantic catalog. "
-        "Returns a structured table with metric versions, entity scope, and warnings. "
-        "Never invent numbers; use this tool instead of raw SQL."
+        "ALWAYS returns a tabular dataset: result_type=table with columns/fields + rows. "
+        "Presentation (markdown, prose summary, charts) is done by skills from this table — "
+        "do not invent numbers; use this tool instead of raw SQL."
     ),
     "parameters": {
         "type": "object",
@@ -14,8 +15,8 @@ ASK = {
             },
             "output_mode": {
                 "type": "string",
-                "description": "Output mode",
-                "default": "table_and_summary",
+                "description": "Deprecated compatibility field; tools always return result_type=table",
+                "default": "table",
             },
             "session_id": {
                 "type": "string",
@@ -45,7 +46,11 @@ FOLLOWUP = {
                 "description": "Follow-up instruction, e.g. 只看毛利率低于5%的产品",
             },
             "session_id": {"type": "string", "default": ""},
-            "output_mode": {"type": "string", "default": "table_and_summary"},
+            "output_mode": {
+                "type": "string",
+                "default": "table",
+                "description": "Deprecated; always returns result_type=table",
+            },
         },
         "required": ["base_query_id", "instruction"],
     },
@@ -53,7 +58,10 @@ FOLLOWUP = {
 
 EXPLAIN = {
     "name": "finance_bi_explain",
-    "description": "Explain metric definitions, dataset grain, filters, or a prior query.",
+    "description": (
+        "Explain metric definitions, dataset grain, filters, or a prior query. "
+        "Returns result_type=table (rows of metrics/catalog objects)."
+    ),
     "parameters": {
         "type": "object",
         "properties": {
@@ -69,6 +77,7 @@ CATALOG_SEARCH = {
     "name": "finance_bi_catalog_search",
     "description": (
         "Search available datasets, metrics, dimensions, date fields, and aliases. "
+        "ALWAYS returns result_type=table (row-oriented). "
         "Use this for catalog exploration (哪些数据集/指标/日期字段). "
         "IMPORTANT: put the search text in `query` (e.g. query=毛利). "
         "`kind` must be one of: all | datasets | metrics | dimensions | date_fields. "
@@ -95,7 +104,10 @@ CATALOG_SEARCH = {
 
 VALIDATE = {
     "name": "finance_bi_validate_result",
-    "description": "Validate a prior query result before formal reporting.",
+    "description": (
+        "Validate a prior query result before formal reporting. "
+        "Returns result_type=table of check rows."
+    ),
     "parameters": {
         "type": "object",
         "properties": {

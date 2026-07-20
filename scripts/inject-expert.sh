@@ -127,6 +127,8 @@ if [ "$EXPERT" = "bi-strategic-office" ] || [ -d "$TPL_EXPERT/semantic" ]; then
     ensure_env "FINANCE_BI_HARD_LIMIT" "5000"
     ensure_env "FINANCE_BI_STATE_DB" "/data/hermes/finance-bi/state/finance_bi.db"
     ensure_env "FINANCE_BI_EXPORT_DIR" "/data/hermes/workspace/exports/bi"
+    ensure_env "FINANCE_BI_MASK_SENSITIVE" "true"
+    ensure_env "FINANCE_BI_REVEAL_FILTERED_SENSITIVE" "true"
   fi
 
   CONTAINER="hermes-$PROFILE"

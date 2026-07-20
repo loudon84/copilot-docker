@@ -4,7 +4,7 @@ from finance_bi.contracts import FinanceBiError
 from finance_bi.handlers import get_service, json_err, json_ok
 
 
-def finance_bi_ask(question: str = "", output_mode: str = "table_and_summary", session_id: str = "", **_: object) -> str:
+def finance_bi_ask(question: str = "", output_mode: str = "table", session_id: str = "", **_: object) -> str:
     try:
         return json_ok(get_service().ask(question, output_mode=output_mode, session_id=session_id))
     except Exception as exc:  # noqa: BLE001
@@ -15,7 +15,7 @@ def finance_bi_followup(
     base_query_id: str = "",
     instruction: str = "",
     session_id: str = "",
-    output_mode: str = "table_and_summary",
+    output_mode: str = "table",
     **_: object,
 ) -> str:
     try:

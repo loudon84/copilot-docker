@@ -38,6 +38,7 @@ finance_bi_validate_result
 finance_bi_export_result
 ```
 
+**返回契约**：取数/目录/解释/校验统一为 `result_type=table`（`columns`/`fields` + `rows`）；口径与过滤在 `meta`。Skill 按用户要求把表格转成摘要/报告等，**不得改写数字**。导出为 `result_type=export`。
 ## 创建与注入
 
 ```bash
@@ -194,7 +195,13 @@ bash scripts/sync-bi-semantic-catalog.sh financial-analysis bi-strategic-office
 bash scripts/down-instance.sh financial-analysis
 ```
 
-**目录探查**：问「销售利润报表有哪些数据集 / 日期字段」时，工具返回 `mode=catalog_meta`（不查业务库）。生产主表 `ebs1_cux_ar_gp_details`，主时间字段 `ar_fin_due_date`。
+**目录探查**：问「销售利润报表有哪些数据集 / 日期字段」时，工具返回目录表格（`result_kind` 以 `catalog_` 开头，不查业务库）；完整分类见 `meta.tables`。生产主表 `ebs1_cux_ar_gp_details`，主时间字段 `ar_fin_due_date`。
+
+### 变更摘要（工具返回契约）
+
+- 统一表格行返回：`result_type=table` + `columns`/`fields` + `rows`
+- 废弃依赖 `output_mode=table_and_summary` 做呈现；呈现由 Skill 完成
+- 目录/解释/校验同样表格化；导出仍为文件（`result_type=export`）
 
 ## 单测
 

@@ -148,6 +148,8 @@ def bi_env(tmp_path: Path):
         state_db=str(state_db),
         export_dir=str(export_dir),
         retain_days=7,
+        mask_sensitive=True,
+        reveal_filtered_sensitive=True,
     )
     svc = reset_service(cfg)
     return {"cfg": cfg, "svc": svc, "export_dir": export_dir, "catalog_dir": catalog_dir}
@@ -233,7 +235,8 @@ def test_ask_followup_export_explain(bi_env):
 
     explained = svc.explain(metric="销售利润")
     assert explained["status"] == "ok"
-    assert explained["metric"]["id"] == "gross_profit_amount"
+    assert explained["result_type"] == "table"
+    assert explained["rows"][0]["id"] == "gross_profit_amount"
 
     exported = svc.export(qid, fmt="csv")
     assert exported["status"] == "ok"
@@ -248,6 +251,9 @@ def test_handlers_return_json_strings(bi_env):
     raw = tool_handlers.finance_bi_ask(question="查询2026Q2各产品销售利润报表")
     data = json.loads(raw)
     assert data["status"] == "ok"
+    assert data["result_type"] == "table"
+    assert isinstance(data.get("rows"), list)
+    assert isinstance(data.get("columns") or data.get("fields"), list)
     qid = data["query_id"]
 
     raw2 = tool_handlers.finance_bi_followup(
@@ -256,16 +262,22 @@ def test_handlers_return_json_strings(bi_env):
     assert json.loads(raw2)["status"] == "ok"
 
     raw3 = tool_handlers.finance_bi_catalog_search(query="毛利")
-    assert json.loads(raw3)["status"] == "ok"
+    cat = json.loads(raw3)
+    assert cat["status"] == "ok"
+    assert cat["result_type"] == "table"
+    assert cat.get("row_count", 0) > 0
 
     # LLM mix-up: search term put into kind — must not return empty catalog
     raw_bad_kind = tool_handlers.finance_bi_catalog_search(query="", kind="毛利")
     bad = json.loads(raw_bad_kind)
     assert bad["status"] == "ok"
-    assert (bad.get("datasets") or bad.get("metrics") or bad.get("date_fields")), bad
+    assert bad["result_type"] == "table"
+    assert bad.get("row_count", 0) > 0 or (bad.get("meta") or {}).get("tables"), bad
 
     raw4 = tool_handlers.finance_bi_validate_result(query_id=qid)
-    assert json.loads(raw4)["status"] == "ok"
+    val = json.loads(raw4)
+    assert val["status"] == "ok"
+    assert val["result_type"] == "table"
 
     raw5 = tool_handlers.finance_bi_export_result(query_id=qid, format="csv")
     assert json.loads(raw5)["status"] == "ok"
@@ -275,6 +287,23 @@ def test_handlers_return_json_strings(bi_env):
     err = json.loads(raw_err)
     assert err["status"] == "error"
     assert err["error_code"] == ErrorCode.QUERY_NOT_FOUND.value
+
+
+def test_ask_returns_unified_table_envelope(bi_env):
+    svc = bi_env["svc"]
+    result = svc.ask("查询2026Q2各产品销售利润报表")
+    assert result["result_type"] == "table"
+    assert result["result_kind"] in {"query", "detail"}
+    assert "columns" in result and "fields" in result
+    assert result["columns"] == result["fields"]
+    assert "totals" in (result.get("meta") or {})
+    assert "entity_scope" in (result.get("meta") or {})
+
+    meta_q = svc.ask("销售利润报表有哪些数据集？列出日期字段")
+    assert meta_q["result_type"] == "table"
+    assert meta_q["result_kind"].startswith("catalog")
+    assert meta_q["row_count"] >= 1
+    assert "tables" in (meta_q.get("meta") or {})
 
 
 def test_unauthorized_schema_blocked(bi_env):

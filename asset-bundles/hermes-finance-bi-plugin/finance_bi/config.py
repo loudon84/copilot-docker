@@ -24,6 +24,13 @@ def normalize_dialect(value: str) -> str:
     return aliases.get(raw, raw)
 
 
+def _env_bool(name: str, default: bool = False) -> bool:
+    raw = os.getenv(name)
+    if raw is None or str(raw).strip() == "":
+        return default
+    return str(raw).strip().lower() in {"1", "true", "yes", "on", "y"}
+
+
 @dataclass
 class FinanceBiConfig:
     dsn: str = ""
@@ -40,6 +47,10 @@ class FinanceBiConfig:
     state_db: str = "/data/hermes/finance-bi/state/finance_bi.db"
     export_dir: str = "/data/hermes/workspace/exports/bi"
     retain_days: int = 7
+    # Mask sensitive dimensions (customer_*) in table output. Set false for internal BI operators.
+    mask_sensitive: bool = True
+    # When true, fields already constrained by query filters are shown in clear text.
+    reveal_filtered_sensitive: bool = True
 
     @property
     def is_mssql(self) -> bool:
@@ -73,4 +84,6 @@ class FinanceBiConfig:
                 "/data/hermes/workspace/exports/bi",
             ),
             retain_days=int(os.getenv("FINANCE_BI_RETAIN_DAYS", "7")),
+            mask_sensitive=_env_bool("FINANCE_BI_MASK_SENSITIVE", True),
+            reveal_filtered_sensitive=_env_bool("FINANCE_BI_REVEAL_FILTERED_SENSITIVE", True),
         )
