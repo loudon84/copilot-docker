@@ -32,16 +32,17 @@ class QueryExecutor:
         if self.config.dialect == "sqlite" and dsn.startswith("sqlite"):
             connect_args = {"check_same_thread": False}
         elif self.config.is_mssql:
-            # SQL Server 2012 + pymssql：固定 TDS 7.0
+            # SQL Server 2012 + pymssql：固定 TDS 7.0；中文库默认 CP936
             connect_args = {
                 "tds_version": "7.0",
                 "timeout": int(self.config.query_timeout_seconds),
                 "login_timeout": 15,
-                "charset": "utf8",
+                "charset": self.config.charset or "cp936",
             }
 
         try:
-            engine = _ENGINE_CACHE.get(dsn)
+            cache_key = f"{dsn}|mssql_charset={connect_args.get('charset', '')}"
+            engine = _ENGINE_CACHE.get(cache_key)
             if engine is None:
                 engine = create_engine(
                     dsn,
@@ -50,7 +51,7 @@ class QueryExecutor:
                     max_overflow=2,
                     connect_args=connect_args,
                 )
-                _ENGINE_CACHE[dsn] = engine
+                _ENGINE_CACHE[cache_key] = engine
         except Exception as exc:  # noqa: BLE001
             raise FinanceBiError(
                 ErrorCode.DATASOURCE_UNAVAILABLE,

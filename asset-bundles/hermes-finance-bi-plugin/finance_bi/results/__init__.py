@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Set
 from finance_bi.catalog import SemanticCatalog
 from finance_bi.config import FinanceBiConfig
 from finance_bi.contracts import SemanticQuery
+from finance_bi.text_codec import repair_row_strings
 
 
 def _filtered_sensitive_fields(semantic: SemanticQuery, sensitive: Set[str]) -> Set[str]:
@@ -76,7 +77,7 @@ def normalize_result(
 
     out_rows = []
     for row in rows:
-        item = dict(row)
+        item = repair_row_strings(dict(row))
         for key in mask_fields:
             if key in item and item[key] is not None:
                 val = str(item[key])

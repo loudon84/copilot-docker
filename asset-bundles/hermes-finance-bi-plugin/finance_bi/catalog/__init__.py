@@ -49,6 +49,8 @@ class SemanticCatalog:
         self.examples: List[Dict[str, Any]] = []
         self._alias_to_metric: Dict[str, str] = {}
         self._alias_to_dimension: Dict[str, str] = {}
+        # Soft validation notes (missing metric refs pruned, catalog still loads)
+        self.load_warnings: List[str] = []
 
     def load(self) -> "SemanticCatalog":
         if not self.root.is_dir():
@@ -61,6 +63,7 @@ class SemanticCatalog:
         self.joins = self._load_dir("joins")
         self.glossary = self._load_list("glossary")
         self.examples = self._load_list("examples")
+        self.load_warnings = []
         self._validate()
         self._build_aliases()
         return self
@@ -113,20 +116,38 @@ class SemanticCatalog:
                         f"dimension {did} references missing dataset {ds}",
                     )
         for ds_id, ds in self.datasets.items():
-            for mid in ds.get("available_metrics") or []:
-                if mid not in self.metrics:
-                    raise FinanceBiError(
-                        ErrorCode.CATALOG_NOT_READY,
-                        f"dataset {ds_id} references missing metric {mid}",
+            # available_metrics 只能是 metrics/*.yaml 的 id；物理列名（如 accrued_rebate_amount）
+            # 若被误写入则剔除并告警，禁止整库 CATALOG_NOT_READY 导致全工具不可用。
+            raw_metrics = list(ds.get("available_metrics") or [])
+            kept_metrics: List[str] = []
+            for mid in raw_metrics:
+                if mid in self.metrics:
+                    kept_metrics.append(mid)
+                else:
+                    msg = (
+                        f"dataset {ds_id}: dropped unknown available_metric {mid!r} "
+                        f"(not in metrics/*.yaml; physical columns belong under fields)"
                     )
-            for did in ds.get("available_dimensions") or []:
-                if did not in self.dimensions and did not in (ds.get("fields") or {}):
-                    if did not in self.dimensions:
-                        if did not in (ds.get("fields") or {}):
-                            raise FinanceBiError(
-                                ErrorCode.CATALOG_NOT_READY,
-                                f"dataset {ds_id} references missing dimension {did}",
-                            )
+                    self.load_warnings.append(msg)
+            ds["available_metrics"] = kept_metrics
+
+            raw_dims = list(ds.get("available_dimensions") or [])
+            kept_dims: List[str] = []
+            fields = ds.get("fields") or {}
+            for did in raw_dims:
+                if did in self.dimensions or did in fields:
+                    kept_dims.append(did)
+                else:
+                    msg = f"dataset {ds_id}: dropped unknown available_dimension {did!r}"
+                    self.load_warnings.append(msg)
+            ds["available_dimensions"] = kept_dims
+
+            if not kept_metrics and not _is_demo(ds):
+                # Still allow load; planner will fall back / error per query
+                self.load_warnings.append(
+                    f"dataset {ds_id}: available_metrics empty after prune — "
+                    f"register metrics/*.yaml or fix available_metrics list"
+                )
 
     def _build_aliases(self) -> None:
         for mid, metric in self.metrics.items():

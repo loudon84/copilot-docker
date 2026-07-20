@@ -40,13 +40,18 @@ class FinanceBiService:
         self.repo = QueryRepository(self.config)
 
     def health(self) -> Dict[str, Any]:
+        prod = self.catalog.production_datasets()
         return {
             "status": "ok",
             "datasets": len(self.catalog.datasets),
+            "production_datasets": list(prod.keys()),
             "metrics": len(self.catalog.metrics),
+            "metric_ids": sorted(self.catalog.metrics.keys()),
             "dimensions": len(self.catalog.dimensions),
             "dialect": self.config.dialect,
             "dsn_configured": bool(self.config.dsn),
+            "catalog_path": str(self.config.catalog_path),
+            "load_warnings": list(getattr(self.catalog, "load_warnings", None) or []),
         }
 
     def _is_meta_question(self, question: str) -> bool:

@@ -39,6 +39,40 @@ finance_bi_export_result
 ```
 
 **返回契约**：取数/目录/解释/校验统一为 `result_type=table`（`columns`/`fields` + `rows`）；口径与过滤在 `meta`。Skill 按用户要求把表格转成摘要/报告等，**不得改写数字**。导出为 `result_type=export`。
+## 本地直连验证（推荐，不经过 Hermes）
+
+注入 Hermes 前，用插件 CLI 直接连库验证问数逻辑：
+
+```powershell
+# 依赖（一次）
+pip install -r asset-bundles/hermes-finance-bi-plugin/requirements.txt
+
+# 健康检查 / 编译 SQL（不执行）
+python scripts/finance_bi_cli.py --catalog expert-templates/bi-strategic-office/semantic doctor
+python scripts/finance_bi_cli.py --env instances/financial-analysis/.env health
+python scripts/finance_bi_cli.py --catalog expert-templates/bi-strategic-office/semantic sql "ar_trx_number=101IN26070199 明细"
+
+# 真实问数（需 .env 中 FINANCE_BI_DSN）
+python scripts/finance_bi_cli.py --env instances/financial-analysis/.env ask "按品牌汇总销售毛利，返回 5 条"
+python scripts/finance_bi_cli.py --env instances/financial-analysis/.env ask "ar_trx_number=101IN26070199 明细"
+python scripts/finance_bi_cli.py --env instances/financial-analysis/.env catalog "毛利"
+```
+
+无实例时也可：
+
+```powershell
+$env:FINANCE_BI_DSN="mssql+pymssql://user:pass@192.168.99.37:1433/DW_TEMP"
+$env:FINANCE_BI_DIALECT="mssql"
+$env:FINANCE_BI_CHARSET="cp936"
+python scripts/finance_bi_cli.py --catalog expert-templates/bi-strategic-office/semantic ask "客户 XXX 交易明细，返回 3 条"
+```
+
+本地冒烟测试（不依赖 Docker）：
+
+```powershell
+python -m pytest tests/test_bi_strategic_office_inject.py tests/test_finance_bi_plugin.py -q
+```
+
 ## 创建与注入
 
 ```bash
@@ -213,6 +247,7 @@ bash scripts/down-instance.sh financial-analysis
 
 - 单据号/`field=value` 会写入 SQL WHERE，followup 不是在上一批 TOP N 行上内存过滤
 - MSSQL 默认 `FINANCE_BI_CHARSET=cp936`，并修复常见 GBK 乱码回显
+- 时间过滤只从日期/日历格式提取（ISO / `2026Q2` / `yyyy年m月d日`），禁止从单据号等编号猜时间；可用「不限时间」清除
 
 ## 单测
 

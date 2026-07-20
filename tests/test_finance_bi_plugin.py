@@ -26,6 +26,7 @@ from finance_bi.planner import (  # noqa: E402
     extract_field_eq_filters,
     extract_trx_number,
     parse_quarter_range,
+    parse_time_range,
 )
 from finance_bi.policy import SqlPolicy  # noqa: E402
 from finance_bi.text_codec import repair_chinese_text  # noqa: E402
@@ -168,9 +169,17 @@ def test_catalog_loads(bi_env):
     assert cat.resolve_metric("销售利润") == "gross_profit_amount"
 
 
-def test_quarter_parse():
-    assert parse_quarter_range("查询2026Q2各产品") == ("2026-04-01", "2026-07-01")
+def test_time_range_strict_date_calendar_only():
+    assert parse_time_range("查询2026Q2各产品") == ("2026-04-01", "2026-07-01")
     assert parse_quarter_range("2025Q4") == ("2025-10-01", "2026-01-01")
+    assert parse_time_range("2026年第2季度") == ("2026-04-01", "2026-07-01")
+    assert parse_time_range("2026-04-01~2026-06-30") == ("2026-04-01", "2026-07-01")
+    assert parse_time_range("2026年4月15日") == ("2026-04-15", "2026-04-16")
+    # 禁止从编号猜时间
+    assert parse_time_range("ar_trx_number=101IN23120194 明细") is None
+    assert parse_time_range("查询 101IN23120194") is None
+    assert parse_time_range("C001977") is None
+    assert parse_time_range("随机数字 20194") is None
 
 
 def test_clarification_on_ambiguous_profit(bi_env):

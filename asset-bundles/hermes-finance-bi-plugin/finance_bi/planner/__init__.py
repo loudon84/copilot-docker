@@ -14,8 +14,31 @@ from finance_bi.contracts import (
     SemanticQuery,
 )
 
-_QUARTER_RE = re.compile(r"(20\d{2})\s*[Qq季]?\s*([1-4])")
-_YEAR_RE = re.compile(r"(20\d{2})\s*年?")
+# ---------------------------------------------------------------------------
+# Time range extraction — STRICT
+# 只允许从「日期/时间/日历」表述提取；禁止从单据号、客户编码等编号里猜年份/季度。
+# 所有模式均要求两侧非字母数字边界，避免 101IN23120194 内嵌 2019+4。
+# ---------------------------------------------------------------------------
+_BOUND_L = r"(?<![A-Za-z0-9_])"
+_BOUND_R = r"(?![A-Za-z0-9_])"
+_YMD = r"(20\d{2})[-/.](0?[1-9]|1[0-2])[-/.](0?[1-9]|[12]\d|3[01])"
+_ISO_RANGE_RE = re.compile(
+    _BOUND_L + _YMD + r"\s*(?:[~～到至]|--+)\s*" + _YMD + _BOUND_R
+)
+_ISO_DATE_RE = re.compile(_BOUND_L + _YMD + _BOUND_R)
+_CN_DATE_RE = re.compile(
+    _BOUND_L + r"(20\d{2})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日?" + _BOUND_R
+)
+_QUARTER_Q_RE = re.compile(_BOUND_L + r"(20\d{2})\s*[Qq]\s*([1-4])" + _BOUND_R)
+_QUARTER_CN_RE = re.compile(
+    _BOUND_L + r"(20\d{2})\s*年\s*第?\s*([1-4])\s*季度?" + _BOUND_R
+)
+_QUARTER_CN2_RE = re.compile(_BOUND_L + r"(20\d{2})\s*第\s*([1-4])\s*季度?" + _BOUND_R)
+_CLEAR_TIME_RE = re.compile(
+    r"(不限时间|不限期间|全部期间|全部时间|取消时间|去掉时间|移除时间|"
+    r"无时间过滤|不要时间|忽略时间|clear\s*time|no\s*time\s*filter)",
+    re.I,
+)
 _MARGIN_LT_RE = re.compile(r"毛利率\s*(?:低于|小于|<|<=)\s*(\d+(?:\.\d+)?)\s*%?")
 _TOP_N_RE = re.compile(r"(?:前|top)\s*(\d+)", re.I)
 _LIMIT_N_RE = re.compile(
@@ -30,14 +53,21 @@ _CUSTOMER_RE = re.compile(
 _CUSTOMER_INLINE_RE = re.compile(
     r"客户\s+([^\s,，；;]{2,80})",
 )
+# field=value / field='value' for known identity columns
+_FIELD_EQ_RE = re.compile(
+    r"(?i)\b(ar_trx_number|customer_code|customer_name|brand_name|brand_code|"
+    r"ou_code|ou_name|product_code|product_name)\s*[=＝]\s*['\"]?([^'\"\s,，；;]+)['\"]?"
+)
+_TRX_LABEL_RE = re.compile(
+    r"(?:单据号|单据|发票号|交易号|事务处理编号|发票编号|ar_trx_number|trx(?:\s*number)?)"
+    r"\s*[：:=\s]+['\"]?([A-Za-z0-9_\-]+)['\"]?",
+    re.I,
+)
+# e.g. 101IN26070199 / 101IN23120194
+_TRX_BARE_RE = re.compile(r"\b(\d{2,4}[A-Z]{2}\d{6,})\b")
 
 
-def parse_quarter_range(text: str) -> Optional[Tuple[str, str]]:
-    m = _QUARTER_RE.search(text.replace("第", ""))
-    if not m:
-        return None
-    year = int(m.group(1))
-    q = int(m.group(2))
+def _quarter_bounds(year: int, q: int) -> Tuple[str, str]:
     start_month = (q - 1) * 3 + 1
     start = date(year, start_month, 1)
     if q == 4:
@@ -46,6 +76,73 @@ def parse_quarter_range(text: str) -> Optional[Tuple[str, str]]:
         end = date(year, start_month + 3, 1)
     return start.isoformat(), end.isoformat()
 
+
+def _ymd(y: str, m: str, d: str) -> str:
+    return date(int(y), int(m), int(d)).isoformat()
+
+
+def parse_time_range(text: str) -> Optional[Tuple[str, str]]:
+    """Extract [start, end) only from explicit date/calendar formats.
+
+    Allowed:
+      - ISO: 2026-04-01~2026-06-30 / 2026/04/01 到 2026/06/30
+      - Single ISO date → that day [d, d+1)
+      - CN date: 2026年4月1日
+      - Calendar quarter: 2026Q2 / 2026年第2季度 / 2026第2季度
+
+    Forbidden:
+      - Guessing year/quarter from invoice/customer/product codes
+      - Loose digit runs without date separators or Q/年/月/日/季 markers
+    """
+    raw = str(text or "")
+    if not raw.strip():
+        return None
+
+    m = _ISO_RANGE_RE.search(raw)
+    if m:
+        start = _ymd(m.group(1), m.group(2), m.group(3))
+        end = _ymd(m.group(4), m.group(5), m.group(6))
+        # normalize to [start, end) — if end is a calendar day, use next day when equal
+        if end <= start:
+            # treat as inclusive end-of-day → next day exclusive
+            y, mo, d = (int(x) for x in end.split("-"))
+            end = date(y, mo, d).fromordinal(date(y, mo, d).toordinal() + 1).isoformat()
+        else:
+            # inclusive end date in NL → exclusive upper bound = end + 1 day
+            y, mo, d = (int(x) for x in end.split("-"))
+            end = date.fromordinal(date(y, mo, d).toordinal() + 1).isoformat()
+        return start, end
+
+    m = _CN_DATE_RE.search(raw)
+    if m:
+        start = _ymd(m.group(1), m.group(2), m.group(3))
+        y, mo, d = (int(x) for x in start.split("-"))
+        end = date.fromordinal(date(y, mo, d).toordinal() + 1).isoformat()
+        return start, end
+
+    m = _ISO_DATE_RE.search(raw)
+    if m:
+        start = _ymd(m.group(1), m.group(2), m.group(3))
+        y, mo, d = (int(x) for x in start.split("-"))
+        end = date.fromordinal(date(y, mo, d).toordinal() + 1).isoformat()
+        return start, end
+
+    for pat in (_QUARTER_Q_RE, _QUARTER_CN_RE, _QUARTER_CN2_RE):
+        m = pat.search(raw)
+        if m:
+            year, q = int(m.group(1)), int(m.group(2))
+            if 1 <= q <= 4 and 2000 <= year <= 2100:
+                return _quarter_bounds(year, q)
+    return None
+
+
+def parse_quarter_range(text: str) -> Optional[Tuple[str, str]]:
+    """Backward-compatible alias → parse_time_range (strict date/calendar only)."""
+    return parse_time_range(text)
+
+
+def wants_clear_time_range(text: str) -> bool:
+    return bool(_CLEAR_TIME_RE.search(text or ""))
 
 def extract_customer_name(text: str) -> Optional[str]:
     """Extract a customer name filter value from natural language."""
@@ -75,6 +172,46 @@ def extract_limit(text: str, default: int, hard: int) -> int:
     return default
 
 
+def extract_field_eq_filters(text: str) -> List[Tuple[str, str]]:
+    """Extract field=value equality filters from NL / semi-structured text."""
+    out: List[Tuple[str, str]] = []
+    seen = set()
+    for m in _FIELD_EQ_RE.finditer(text or ""):
+        field = (m.group(1) or "").strip().lower()
+        value = (m.group(2) or "").strip().strip("\"'“”‘’")
+        if field and value and (field, value) not in seen:
+            seen.add((field, value))
+            out.append((field, value))
+    return out
+
+
+def extract_trx_number(text: str) -> Optional[str]:
+    """Extract AR transaction / invoice number (always scan bare invoice tokens)."""
+    raw = text or ""
+    for field, value in extract_field_eq_filters(raw):
+        if field == "ar_trx_number" and value:
+            return value
+    m = _TRX_LABEL_RE.search(raw)
+    if m:
+        return (m.group(1) or "").strip()
+    # Always accept invoice-shaped tokens — do not require 单据/过滤 keywords
+    m = _TRX_BARE_RE.search(raw)
+    if m:
+        return m.group(1)
+    return None
+
+
+def _strip_time_filters(filters: List[FilterClause], time_field: str) -> List[FilterClause]:
+    return [
+        f
+        for f in filters
+        if not (
+            f.field == time_field
+            and str(f.operator or "").lower() in {"gte", "gt", "lte", "lt", "<=", ">=", ">", "<", "eq", "="}
+        )
+    ]
+
+
 class QueryPlanner:
     DEFAULT_DATASET = "ebs1_cux_ar_gp_details"
 
@@ -101,6 +238,8 @@ class QueryPlanner:
         return False
 
     def _is_detail_request(self, text: str) -> bool:
+        if extract_trx_number(text) or extract_field_eq_filters(text):
+            return True
         return any(
             k in text
             for k in (
@@ -113,6 +252,25 @@ class QueryPlanner:
                 "原始行",
             )
         )
+
+    def _upsert_eq_filter(self, filters: List[FilterClause], field: str, value: str) -> List[FilterClause]:
+        out = [f for f in filters if f.field != field]
+        out.append(FilterClause(field=field, operator="eq", value=value))
+        return out
+
+    def _apply_identity_filters(
+        self, text: str, dataset: dict, filters: List[FilterClause]
+    ) -> List[FilterClause]:
+        """Apply trx / field=value filters into SQL WHERE (not in-memory on prior rows)."""
+        for field, value in extract_field_eq_filters(text):
+            if self._dimension_allowed(dataset, field):
+                filters = self._upsert_eq_filter(filters, field, value)
+        trx = extract_trx_number(text)
+        if trx and self._dimension_allowed(dataset, "ar_trx_number"):
+            # Avoid double-add if already from field=eq
+            if not any(f.field == "ar_trx_number" and str(f.value) == trx for f in filters):
+                filters = self._upsert_eq_filter(filters, "ar_trx_number", trx)
+        return filters
 
     def _pick_dimensions(self, text: str, dataset: dict, *, detail: bool, has_customer_filter: bool) -> List[str]:
         candidates: List[str] = []
@@ -221,11 +379,16 @@ class QueryPlanner:
                 )
 
         filters: List[FilterClause] = []
-        time_field = dataset.get("primary_time_field") or "posting_date"
-        qrange = parse_quarter_range(text)
-        if qrange:
-            filters.append(FilterClause(field=time_field, operator="gte", value=qrange[0]))
-            filters.append(FilterClause(field=time_field, operator="lt", value=qrange[1]))
+        time_field = str(dataset.get("primary_time_field") or "posting_date")
+
+        # Time ONLY from explicit date/calendar phrases → applied on primary_time_field
+        if wants_clear_time_range(text):
+            filters = _strip_time_filters(filters, time_field)
+        else:
+            trange = parse_time_range(text)
+            if trange:
+                filters.append(FilterClause(field=time_field, operator="gte", value=trange[0]))
+                filters.append(FilterClause(field=time_field, operator="lt", value=trange[1]))
 
         m = _MARGIN_LT_RE.search(text)
         if m:
@@ -237,6 +400,18 @@ class QueryPlanner:
         if customer_name and self._dimension_allowed(dataset, "customer_name"):
             filters.append(
                 FilterClause(field="customer_name", operator="contains", value=customer_name)
+            )
+
+        # Identity codes (trx/customer_code) are NOT time sources
+        filters = self._apply_identity_filters(text, dataset, filters)
+        has_identity = any(
+            f.field in {"ar_trx_number", "customer_code"} and f.operator in {"eq", "="}
+            for f in filters
+        )
+        if has_identity:
+            detail = True
+            dimensions = self._pick_dimensions(
+                text, dataset, detail=True, has_customer_filter=bool(customer_name)
             )
 
         entity_field = str(dataset.get("entity_field") or "entity_code")
@@ -253,7 +428,11 @@ class QueryPlanner:
         else:
             order_by.append(OrderByClause(field="net_sales_amount", direction="desc"))
 
-        default_limit = 10 if detail else self.config.default_limit
+        # Precise identity lookup: do not inherit a stale "10 rows" default unless asked
+        if has_identity:
+            default_limit = self.config.default_limit
+        else:
+            default_limit = 10 if detail else self.config.default_limit
         limit = extract_limit(text, default_limit, self.config.hard_limit)
 
         metric_versions = {
@@ -297,6 +476,41 @@ class QueryPlanner:
             q.filters.append(
                 FilterClause(field="customer_name", operator="contains", value=customer_name)
             )
+
+        time_field = str(dataset.get("primary_time_field") or "posting_date")
+
+        # New conditions become SQL WHERE on the full table — not a filter over prior TOP N rows
+        before = [(f.field, f.operator, f.value) for f in q.filters]
+        q.filters = self._apply_identity_filters(text, dataset, list(q.filters))
+        after = [(f.field, f.operator, f.value) for f in q.filters]
+        has_identity = any(
+            f.field == "ar_trx_number" or (
+                f.operator in {"eq", "="}
+                and f.field in {"customer_code", "brand_code", "product_code", "ou_code"}
+            )
+            for f in q.filters
+        )
+        identity_added = after != before and has_identity
+        if has_identity and (identity_added or extract_trx_number(text)):
+            q.mode = "detail"
+            q.dimensions = self._pick_dimensions(
+                text,
+                dataset,
+                detail=True,
+                has_customer_filter=any(f.field == "customer_name" for f in q.filters),
+            )
+            if not _LIMIT_N_RE.search(text) and not _TOP_N_RE.search(text):
+                q.limit = self.config.default_limit
+
+        # Time updates: only explicit clear / date-calendar phrases (never from codes)
+        if wants_clear_time_range(text):
+            q.filters = _strip_time_filters(q.filters, time_field)
+        else:
+            trange = parse_time_range(text)
+            if trange:
+                q.filters = _strip_time_filters(q.filters, time_field)
+                q.filters.append(FilterClause(field=time_field, operator="gte", value=trange[0]))
+                q.filters.append(FilterClause(field=time_field, operator="lt", value=trange[1]))
 
         if "区域" in text or "销售区域" in text:
             region_dim = (
