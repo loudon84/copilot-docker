@@ -25,8 +25,9 @@ metadata:
 ## 流程
 
 1. 歧义则先澄清，不猜口径。
-2. 取数用 finance_bi_ask / finance_bi_followup。
-3. 口径解释用 finance_bi_explain / finance_bi_catalog_search。
-4. 正式报告前用 finance_bi_validate_result。
-5. 导出用 finance_bi_export_result（csv/xlsx）。
+2. **先探目录再取数**：问「有哪些数据集 / 日期字段 / 口径」时，优先 `finance_bi_catalog_search` 或 `finance_bi_explain(topic=...)`；不要把目录问题当成汇总查询。
+3. 取数用 `finance_bi_ask` / `finance_bi_followup`。
+4. 正式报告前用 `finance_bi_validate_result`。
+5. 导出用 `finance_bi_export_result`（csv/xlsx）。
 6. 不得修改工具返回的数字。
+7. 生产主表：`ebs1_cux_ar_gp_details`（销售利润/毛利）；主时间字段以目录返回的 `primary_time_field` / `date_fields` 为准。

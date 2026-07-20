@@ -38,9 +38,27 @@ def finance_bi_explain(query_id: str = "", topic: str = "", metric: str = "", **
         return json_err(exc)
 
 
-def finance_bi_catalog_search(query: str = "", kind: str = "all", **_: object) -> str:
+def finance_bi_catalog_search(
+    query: str = "",
+    kind: str = "all",
+    q: str = "",
+    keyword: str = "",
+    search: str = "",
+    text: str = "",
+    **kwargs: object,
+) -> str:
+    """Search semantic catalog. Tolerates common LLM argument mix-ups."""
     try:
-        return json_ok(get_service().catalog_search(query=query, kind=kind))
+        # Hermes/LLM sometimes put the search term in `kind`, or use alias keys.
+        raw_query = query or q or keyword or search or text or kwargs.get("query") or ""
+        raw_kind = kind or kwargs.get("kind") or "all"
+        if isinstance(raw_query, (list, tuple)):
+            raw_query = " ".join(str(x) for x in raw_query)
+        if isinstance(raw_kind, (list, tuple)):
+            raw_kind = str(raw_kind[0]) if raw_kind else "all"
+        return json_ok(
+            get_service().catalog_search(query=str(raw_query or ""), kind=str(raw_kind or "all"))
+        )
     except Exception as exc:  # noqa: BLE001
         return json_err(exc)
 

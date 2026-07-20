@@ -67,15 +67,26 @@ EXPLAIN = {
 
 CATALOG_SEARCH = {
     "name": "finance_bi_catalog_search",
-    "description": "Search available datasets, metrics, dimensions, and aliases.",
+    "description": (
+        "Search available datasets, metrics, dimensions, date fields, and aliases. "
+        "Use this for catalog exploration (哪些数据集/指标/日期字段). "
+        "IMPORTANT: put the search text in `query` (e.g. query=毛利). "
+        "`kind` must be one of: all | datasets | metrics | dimensions | date_fields. "
+        "Do NOT put Chinese keywords into `kind`."
+    ),
     "parameters": {
         "type": "object",
         "properties": {
-            "query": {"type": "string", "default": ""},
+            "query": {
+                "type": "string",
+                "description": "Search text, e.g. 毛利 / 销售利润报表 / 日期. Empty returns full production catalog.",
+                "default": "",
+            },
             "kind": {
                 "type": "string",
-                "description": "all | datasets | metrics | dimensions",
+                "description": "Filter type ONLY: all | datasets | metrics | dimensions | date_fields",
                 "default": "all",
+                "enum": ["all", "datasets", "metrics", "dimensions", "date_fields", "fields"],
             },
         },
         "required": [],

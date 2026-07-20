@@ -178,17 +178,20 @@ instances/bi-strategic-office/
 
 ```bash
 # 更新模板 / 语义目录 / 插件后重新注入（幂等）
-bash scripts/inject-expert.sh bi-strategic-office bi-strategic-office
-bash scripts/sync-bi-semantic-catalog.sh bi-strategic-office
-bash scripts/sync-runtime-env.sh bi-strategic-office
-bash scripts/restart-instance.sh bi-strategic-office
+# 实例名示例：financial-analysis；专家模板仍是 bi-strategic-office
+bash scripts/inject-expert.sh financial-analysis bi-strategic-office
+bash scripts/sync-bi-semantic-catalog.sh financial-analysis bi-strategic-office
+bash scripts/sync-runtime-env.sh financial-analysis
+bash scripts/restart-instance.sh financial-analysis
 
 # 仅同步语义 YAML
-bash scripts/sync-bi-semantic-catalog.sh bi-strategic-office
+bash scripts/sync-bi-semantic-catalog.sh financial-analysis bi-strategic-office
 
 # 停止
-bash scripts/down-instance.sh bi-strategic-office
+bash scripts/down-instance.sh financial-analysis
 ```
+
+**目录探查**：问「销售利润报表有哪些数据集 / 日期字段」时，工具返回 `mode=catalog_meta`（不查业务库）。生产主表 `ebs1_cux_ar_gp_details`，主时间字段 `ar_fin_due_date`。
 
 ## 单测
 

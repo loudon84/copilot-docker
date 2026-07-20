@@ -61,9 +61,8 @@ class QueryExecutor:
         started = time.perf_counter()
         try:
             with engine.connect() as conn:
-                trans = conn.begin()
-                try:
-                    if self.config.dialect == "postgresql":
+                if self.config.dialect == "postgresql":
+                    with conn.begin():
                         conn.execute(
                             text(
                                 f"SET LOCAL statement_timeout = {int(self.config.query_timeout_seconds) * 1000}"
@@ -73,20 +72,27 @@ class QueryExecutor:
                             conn.execute(text("SET TRANSACTION READ ONLY"))
                         except Exception:  # noqa: BLE001
                             pass
-                    elif self.config.is_mssql:
-                        # LOCK_TIMEOUT in milliseconds
-                        conn.execute(
-                            text(
-                                f"SET LOCK_TIMEOUT {int(self.config.query_timeout_seconds) * 1000}"
-                            )
+                        result = conn.execute(text(sql))
+                        keys = list(result.keys())
+                        rows = [dict(zip(keys, row)) for row in result.fetchall()]
+                elif self.config.is_mssql:
+                    # pymssql treats '%' as bind placeholder — escape when SQL has no bound params
+                    safe_sql = sql.replace("%", "%%")
+                    conn.execute(
+                        text(
+                            f"SET LOCK_TIMEOUT {int(self.config.query_timeout_seconds) * 1000}"
                         )
-                    result = conn.execute(text(sql))
-                    keys = list(result.keys())
-                    rows = [dict(zip(keys, row)) for row in result.fetchall()]
-                    trans.commit()
-                except Exception:
-                    trans.rollback()
-                    raise
+                    )
+                    conn.commit()
+                    with conn.begin():
+                        result = conn.execute(text(safe_sql))
+                        keys = list(result.keys())
+                        rows = [dict(zip(keys, row)) for row in result.fetchall()]
+                else:
+                    with conn.begin():
+                        result = conn.execute(text(sql))
+                        keys = list(result.keys())
+                        rows = [dict(zip(keys, row)) for row in result.fetchall()]
         except FinanceBiError:
             raise
         except Exception as exc:  # noqa: BLE001
@@ -96,7 +102,7 @@ class QueryExecutor:
             raise FinanceBiError(
                 ErrorCode.DATASOURCE_UNAVAILABLE,
                 "query execution failed",
-                {"reason": type(exc).__name__},
+                {"reason": type(exc).__name__, "detail": str(exc)[:500]},
             ) from exc
 
         elapsed_ms = (time.perf_counter() - started) * 1000.0

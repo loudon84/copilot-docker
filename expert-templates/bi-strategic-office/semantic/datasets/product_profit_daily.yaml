@@ -28,6 +28,8 @@ use_cases:
 forbidden_use_cases:
   - 付款核销
   - 凭证过账
+status: demo
+notes: SQLite/单测演示数据集，生产检索默认忽略。
 fields:
   posting_date:
     type: date

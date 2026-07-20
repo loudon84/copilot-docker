@@ -258,6 +258,12 @@ def test_handlers_return_json_strings(bi_env):
     raw3 = tool_handlers.finance_bi_catalog_search(query="毛利")
     assert json.loads(raw3)["status"] == "ok"
 
+    # LLM mix-up: search term put into kind — must not return empty catalog
+    raw_bad_kind = tool_handlers.finance_bi_catalog_search(query="", kind="毛利")
+    bad = json.loads(raw_bad_kind)
+    assert bad["status"] == "ok"
+    assert (bad.get("datasets") or bad.get("metrics") or bad.get("date_fields")), bad
+
     raw4 = tool_handlers.finance_bi_validate_result(query_id=qid)
     assert json.loads(raw4)["status"] == "ok"
 

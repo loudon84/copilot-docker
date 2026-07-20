@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -14,6 +15,12 @@ from finance_bi.planner import QueryPlanner
 from finance_bi.policy import SqlPolicy
 from finance_bi.repository import QueryRepository
 from finance_bi.results import normalize_result, validate_result_payload
+
+_META_ASK_RE = re.compile(
+    r"(有哪些数据集|哪些数据集|数据集有哪些|列出.*字段|与日期有关|日期有关|日期字段|"
+    r"时间字段|语义目录|可用指标|可用维度|检查.*报表|报表.*数据集)",
+    re.I,
+)
 
 
 class FinanceBiService:
@@ -36,8 +43,35 @@ class FinanceBiService:
             "dsn_configured": bool(self.config.dsn),
         }
 
+    def _is_meta_question(self, question: str) -> bool:
+        text = str(question or "")
+        if _META_ASK_RE.search(text):
+            return True
+        # 纯目录探查：问报表有什么，但没有明确聚合/排名意图
+        if any(k in text for k in ("数据集", "字段", "目录")) and not any(
+            k in text for k in ("汇总", "排名", "前", "多少钱", "按品牌", "按客户", "同比", "环比")
+        ):
+            return True
+        return False
+
     def ask(self, question: str, output_mode: str = "table_and_summary", session_id: str = "") -> Dict[str, Any]:
-        semantic = self.planner.plan(question)
+        text = str(question or "").strip()
+        if self._is_meta_question(text):
+            payload = self.catalog.describe_report_catalog(text)
+            return {
+                "status": "ok",
+                "mode": "catalog_meta",
+                "title": text[:120],
+                "output_mode": output_mode,
+                "session_id": session_id,
+                **payload,
+                "summary": (
+                    f"找到 {len(payload.get('datasets') or [])} 个数据集，"
+                    f"{len(payload.get('date_fields') or [])} 个日期相关字段；"
+                    "本结果来自语义目录，未查询业务库。"
+                ),
+            }
+        semantic = self.planner.plan(text)
         return self._run(semantic, session_id=session_id, output_mode=output_mode)
 
     def followup(
@@ -47,11 +81,19 @@ class FinanceBiService:
         session_id: str = "",
         output_mode: str = "table_and_summary",
     ) -> Dict[str, Any]:
+        base_query_id = str(base_query_id or "").strip()
+        instruction = str(instruction or "").strip()
+        if not base_query_id:
+            raise FinanceBiError(ErrorCode.INVALID_ARGUMENT, "base_query_id is required")
         base = self.repo.get_query(base_query_id)
         semantic = self.planner.apply_followup(base["semantic_query"], instruction)
         return self._run(semantic, session_id=session_id, output_mode=output_mode)
 
     def explain(self, query_id: str = "", topic: str = "", metric: str = "") -> Dict[str, Any]:
+        query_id = str(query_id or "").strip()
+        topic = str(topic or "").strip()
+        metric = str(metric or "").strip()
+
         if query_id:
             stored = self.repo.get_query(query_id)
             semantic: SemanticQuery = stored["semantic_query"]
@@ -79,6 +121,7 @@ class FinanceBiService:
                 },
                 "metrics": metric_info,
                 "filters": semantic.to_dict()["filters"],
+                "date_fields": self.catalog.date_fields(semantic.dataset),
                 "currency": self.config.default_currency,
                 "sql_compiled": stored.get("sql_text"),
             }
@@ -91,12 +134,75 @@ class FinanceBiService:
             return {"status": "ok", "metric": {"id": mid, **m}}
 
         if topic:
+            # Prefer structured report catalog for business topics
+            if any(k in topic for k in ("报表", "数据集", "日期", "字段", "利润", "毛利", "目录")):
+                return {"status": "ok", "mode": "catalog_meta", **self.catalog.describe_report_catalog(topic)}
             return {"status": "ok", "catalog": self.catalog.search(topic)}
 
-        raise FinanceBiError(ErrorCode.INVALID_ARGUMENT, "provide query_id, metric, or topic")
+        # empty explain -> full production catalog overview
+        return {"status": "ok", "mode": "catalog_meta", **self.catalog.describe_report_catalog("销售利润报表")}
 
     def catalog_search(self, query: str = "", kind: str = "all") -> Dict[str, Any]:
-        return {"status": "ok", **self.catalog.search(query, kind=kind)}
+        query = str(query or "").strip()
+        kind = str(kind or "all").strip().lower()
+        known_kinds = {
+            "all",
+            "datasets",
+            "metrics",
+            "dimensions",
+            "date_fields",
+            "fields",
+        }
+        # LLM often puts the search term into `kind` (e.g. kind=毛利, query="")
+        if kind not in known_kinds:
+            if not query:
+                query = kind
+            kind = "all"
+
+        if kind in {"date_fields", "fields"} or any(k in query for k in ("日期", "时间字段")):
+            payload = self.catalog.search(query, kind="date_fields", include_demo=False)
+            if not payload.get("date_fields"):
+                payload["date_fields"] = self.catalog.date_fields()
+            if not payload.get("datasets"):
+                payload["datasets"] = [
+                    {
+                        "id": ds_id,
+                        "name": ds.get("name"),
+                        "primary_time_field": ds.get("primary_time_field"),
+                        "status": ds.get("status") or "active",
+                    }
+                    for ds_id, ds in self.catalog.production_datasets().items()
+                ] or [
+                    {
+                        "id": ds_id,
+                        "name": ds.get("name"),
+                        "primary_time_field": ds.get("primary_time_field"),
+                        "status": ds.get("status") or "active",
+                    }
+                    for ds_id, ds in self.catalog.datasets.items()
+                ]
+            return {"status": "ok", "mode": "date_fields", **payload}
+
+        if any(k in query for k in ("销售利润", "利润报表", "毛利报表", "数据集")):
+            return {"status": "ok", "mode": "catalog_meta", **self.catalog.describe_report_catalog(query)}
+
+        # Profit / margin keyword → structured catalog meta (avoids "empty arrays" UX)
+        if any(k in query for k in ("毛利", "利润", "销售", "gross", "margin", "profit")):
+            return {"status": "ok", "mode": "catalog_meta", **self.catalog.describe_report_catalog(query)}
+
+        payload = self.catalog.search(query, kind=kind, include_demo=False)
+        empty = not any(payload.get(k) for k in ("datasets", "metrics", "dimensions", "date_fields"))
+        if empty:
+            # Never return a bare empty catalog — fall back to production overview
+            return {
+                "status": "ok",
+                "mode": "catalog_meta",
+                "recovered_from_empty_search": True,
+                "original_query": query,
+                "original_kind": kind,
+                **self.catalog.describe_report_catalog(query or "销售利润报表"),
+            }
+        return {"status": "ok", **payload}
 
     def validate(self, query_id: str) -> Dict[str, Any]:
         # Re-run to obtain fresh normalized payload for checks
