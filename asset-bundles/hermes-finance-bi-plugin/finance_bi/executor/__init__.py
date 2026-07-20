@@ -32,8 +32,13 @@ class QueryExecutor:
         if self.config.dialect == "sqlite" and dsn.startswith("sqlite"):
             connect_args = {"check_same_thread": False}
         elif self.config.is_mssql:
-            # pymssql / pyodbc login timeout
-            connect_args = {"timeout": int(self.config.query_timeout_seconds)}
+            # SQL Server 2012 + pymssql：固定 TDS 7.0
+            connect_args = {
+                "tds_version": "7.0",
+                "timeout": int(self.config.query_timeout_seconds),
+                "login_timeout": 15,
+                "charset": "utf8",
+            }
 
         try:
             engine = _ENGINE_CACHE.get(dsn)

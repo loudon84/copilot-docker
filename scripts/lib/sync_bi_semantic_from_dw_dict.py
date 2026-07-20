@@ -1,18 +1,20 @@
 #!/usr/bin/env python3
 """从 SQL Server 字典表 DW_AI_Table_Column_List 拉取字段说明，生成/更新语义 dataset YAML。
 
-用法（在能访问 192.168.99.37 的机器上）:
+用法（在能访问数仓的机器上）:
 
-  set FINANCE_BI_DSN=mssql+pymssql://AIUser:PASSWORD@192.168.99.37:4399/DW_TEMP
+  export FINANCE_BI_DSN='mssql+pymssql://AIUser:PASSWORD@192.168.99.37:1433/DW_TEMP'
+  python scripts/lib/sync_bi_semantic_from_dw_dict.py --probe-columns
+
   python scripts/lib/sync_bi_semantic_from_dw_dict.py \\
     --table ebs1_cux_ar_gp_details \\
     --out expert-templates/bi-strategic-office/semantic/datasets/ebs1_cux_ar_gp_details.yaml
 
 可选环境变量（按你们字典表真实列名调整）:
   DW_DICT_TABLE=DW_AI_Table_Column_List
-  DW_DICT_TABLE_COL=table_name
-  DW_DICT_COLUMN_COL=column_name
-  DW_DICT_DESC_COL=column_comment
+  DW_DICT_TABLE_COL=TableName
+  DW_DICT_COLUMN_COL=ColumnName
+  DW_DICT_DESC_COL=ColumnDesc
 """
 
 from __future__ import annotations
@@ -29,22 +31,36 @@ except ImportError:
     print("ERROR: need PyYAML", file=sys.stderr)
     raise SystemExit(2)
 
+# SQL Server 2012 + pymssql：固定 TDS 7.0（已验证可连）
+_MSSQL_CONNECT_ARGS = {
+    "tds_version": "7.0",
+    "login_timeout": 15,
+    "timeout": 60,
+    "charset": "utf8",
+}
+
 
 def _quote_ident(name: str) -> str:
     return "[" + name.replace("]", "]]") + "]"
 
 
-def fetch_columns(dsn: str, dict_table: str, table_name: str, table_col: str, column_col: str, desc_col: str):
-    from sqlalchemy import create_engine, text
+def create_mssql_engine(dsn: str):
+    from sqlalchemy import create_engine
 
-    engine = create_engine(dsn, pool_pre_ping=True)
-    # Try common schema-qualified names
+    if dsn.startswith("mssql"):
+        return create_engine(dsn, pool_pre_ping=True, connect_args=dict(_MSSQL_CONNECT_ARGS))
+    return create_engine(dsn, pool_pre_ping=True)
+
+
+def fetch_columns(dsn: str, dict_table: str, table_name: str, table_col: str, column_col: str, desc_col: str):
+    from sqlalchemy import text
+
+    engine = create_mssql_engine(dsn)
     candidates = [dict_table]
     if "." not in dict_table:
         candidates = [f"dbo.{dict_table}", dict_table]
 
     last_err: Exception | None = None
-    rows: list[dict[str, Any]] = []
     with engine.connect() as conn:
         for dt in candidates:
             sql = text(
@@ -82,21 +98,16 @@ def build_dataset_yaml(table_name: str, columns: list[dict[str, Any]]) -> dict[s
         if not col:
             continue
         desc = str(row.get("description") or "").strip() or col
-        fields[col] = {"type": "string", "description": desc}
+        fields[col] = {"description": desc, "source_column": col}
         low = col.lower()
         desc_l = desc.lower()
-        if any(k in low or k in desc_l for k in ("amount", "amt", "qty", "quantity", "金额", "数量", "毛利", "成本", "销售")):
-            if any(k in low or k in desc_l for k in ("amount", "amt", "金额", "毛利", "成本", "sales", "gp", "cogs")):
-                metric_candidates.append(col)
-        if any(
-            k in low or k in desc_l
-            for k in ("code", "name", "date", "period", "region", "entity", "customer", "product", "日期", "区域", "客户", "产品", "主体")
-        ):
+        if any(k in low or k in desc_l for k in ("amt", "amount", "qty", "金额", "数量", "成本", "毛利", "收入", "销售额")):
+            metric_candidates.append(col)
+        else:
             dim_candidates.append(col)
 
-    # Prefer explicit known business fields if present
     def pick(names: list[str], pool: list[str]) -> list[str]:
-        found = []
+        found: list[str] = []
         lower_map = {c.lower(): c for c in pool}
         for n in names:
             if n.lower() in lower_map:
@@ -136,9 +147,9 @@ def main() -> int:
     parser.add_argument("--dsn", default=os.getenv("FINANCE_BI_DSN", ""))
     parser.add_argument("--table", default="ebs1_cux_ar_gp_details")
     parser.add_argument("--dict-table", default=os.getenv("DW_DICT_TABLE", "DW_AI_Table_Column_List"))
-    parser.add_argument("--table-col", default=os.getenv("DW_DICT_TABLE_COL", "table_name"))
-    parser.add_argument("--column-col", default=os.getenv("DW_DICT_COLUMN_COL", "column_name"))
-    parser.add_argument("--desc-col", default=os.getenv("DW_DICT_DESC_COL", "column_comment"))
+    parser.add_argument("--table-col", default=os.getenv("DW_DICT_TABLE_COL", "TableName"))
+    parser.add_argument("--column-col", default=os.getenv("DW_DICT_COLUMN_COL", "ColumnName"))
+    parser.add_argument("--desc-col", default=os.getenv("DW_DICT_DESC_COL", "ColumnDesc"))
     parser.add_argument(
         "--out",
         default="expert-templates/bi-strategic-office/semantic/datasets/ebs1_cux_ar_gp_details.yaml",
@@ -151,14 +162,16 @@ def main() -> int:
         return 1
 
     if args.probe_columns:
-        from sqlalchemy import create_engine, text
+        from sqlalchemy import text
 
-        eng = create_engine(args.dsn, pool_pre_ping=True)
+        eng = create_mssql_engine(args.dsn)
         with eng.connect() as conn:
             r = conn.execute(text("SELECT TOP 5 * FROM dbo.DW_AI_Table_Column_List"))
-            print("columns:", list(r.keys()))
+            keys = list(r.keys())
+            print("[ok] connected (tds_version=7.0)")
+            print("columns:", keys)
             for row in r.fetchall():
-                print(dict(zip(r.keys(), row)))
+                print(dict(zip(keys, row)))
         return 0
 
     rows = fetch_columns(

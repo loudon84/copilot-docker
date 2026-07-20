@@ -117,7 +117,7 @@ expert-templates/bi-strategic-office/policies/
 | 项 | 值 |
 |----|-----|
 | 引擎 | SQL Server 2012 |
-| 地址 | `192.168.99.37:4399` |
+| 地址 | `192.168.99.37:1433`（若连不上再核对是否实际为自定义端口） |
 | 库名 | `DW_TEMP` |
 | 只读账号 | `AIUser`（密码勿写入仓库，写在实例 `.env`） |
 | 事实表 | `dbo.ebs1_cux_ar_gp_details`（授权分销销售毛利报表） |
@@ -126,19 +126,23 @@ expert-templates/bi-strategic-office/policies/
 实例 `.env` 示例：
 
 ```env
-FINANCE_BI_DSN=mssql+pymssql://AIUser:PASSWORD@192.168.99.37:4399/DW_TEMP
+FINANCE_BI_DSN=mssql+pymssql://AIUser:PASSWORD@192.168.99.37:1433/DW_TEMP
 FINANCE_BI_DIALECT=mssql
+FINANCE_BI_TDS_VERSION=7.0
 FINANCE_BI_ALLOWED_SCHEMAS=dbo
 FINANCE_BI_ALLOWED_ENTITIES=   # 按实际主体字段值填写，如有
 FINANCE_BI_CATALOG_PATH=/data/hermes/finance-bi/semantic
 FINANCE_BI_POLICY_PATH=/data/hermes/finance-bi/policies
 ```
 
+**pymssql 报 `20002 Adaptive Server connection failed`**：多为 TDS 协议版本与 SQL Server 2012 不匹配，先设 `FINANCE_BI_TDS_VERSION=7.0` 再连；脚本 `--probe-columns` 会自动依次尝试 7.0–7.4。
+
 **用字典表生成语义字段（IT）**：
 
 ```bash
 # 1) 先看字典表真实列名（若默认 table_name/column_name/column_comment 对不上）
-export FINANCE_BI_DSN='mssql+pymssql://AIUser:PASSWORD@192.168.99.37:4399/DW_TEMP'
+export FINANCE_BI_DSN='mssql+pymssql://AIUser:PASSWORD@192.168.99.37:1433/DW_TEMP'
+export FINANCE_BI_TDS_VERSION=7.0
 python scripts/lib/sync_bi_semantic_from_dw_dict.py --probe-columns
 
 # 2) 按探测结果设置列名环境变量后生成 dataset YAML

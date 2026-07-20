@@ -114,6 +114,7 @@ if [ "$EXPERT" = "bi-strategic-office" ] || [ -d "$TPL_EXPERT/semantic" ]; then
     }
     ensure_env "FINANCE_BI_DSN" ""
     ensure_env "FINANCE_BI_DIALECT" "mssql"
+    ensure_env "FINANCE_BI_TDS_VERSION" "7.0"
     ensure_env "FINANCE_BI_CATALOG_PATH" "/data/hermes/finance-bi/semantic"
     ensure_env "FINANCE_BI_POLICY_PATH" "/data/hermes/finance-bi/policies"
     ensure_env "FINANCE_BI_ALLOWED_SCHEMAS" "dbo,bi_finance,bi_sales"

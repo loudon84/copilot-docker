@@ -2,7 +2,7 @@ id: dw_temp
 name: DW_TEMP（授权分销销售毛利）
 dialect: mssql
 host: 192.168.99.37
-port: 4399
+port: 1433
 database: DW_TEMP
 schemas:
   - dbo
