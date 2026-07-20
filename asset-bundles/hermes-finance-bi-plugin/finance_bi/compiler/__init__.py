@@ -27,11 +27,7 @@ class SqlCompiler:
                 f"schema not allowed: {schema}",
             )
 
-        # SQLite fixture uses unqualified table name
-        if self.config.dialect == "sqlite":
-            table_sql = table.split(".")[-1]
-        else:
-            table_sql = table
+        table_sql = self._format_table(table)
 
         select_parts: List[str] = []
         group_parts: List[str] = []
@@ -49,25 +45,20 @@ class SqlCompiler:
             expr = str(metric.get("expression") or "")
             if not expr:
                 raise FinanceBiError(ErrorCode.METRIC_NOT_FOUND, f"metric expression missing: {mid}")
-            # For SQLite ratio, keep expression as-is
             select_parts.append(f"({expr}) AS {mid}")
 
-        having_fields: Set[str] = set()
         for flt in query.filters:
             if flt.field in query.metrics or flt.field in self.catalog.metrics:
-                # HAVING on aggregated metric
                 mid = flt.field if flt.field in self.catalog.metrics else flt.field
                 metric = self.catalog.metrics.get(mid)
                 if not metric:
                     raise FinanceBiError(ErrorCode.METRIC_NOT_FOUND, f"metric not found: {mid}")
                 expr = str(metric.get("expression"))
                 having_parts.append(self._cmp(expr, flt.operator, flt.value))
-                having_fields.add(mid)
             else:
                 field = self._dim_field(dataset, flt.field)
                 where_parts.append(self._cmp(field, flt.operator, flt.value))
 
-        # entity RLS injection
         entity_field = dataset.get("entity_field") or "entity_code"
         if self.config.allowed_entities:
             entities = ", ".join(self._quote(e) for e in self.config.allowed_entities)
@@ -84,11 +75,21 @@ class SqlCompiler:
             bits = []
             for ob in query.order_by:
                 direction = "DESC" if str(ob.direction).lower().startswith("d") else "ASC"
-                # order by alias if metric/dim
                 bits.append(f"{ob.field} {direction}")
             order_sql = " ORDER BY " + ", ".join(bits)
+        elif self.config.is_mssql:
+            # OFFSET/FETCH requires ORDER BY on SQL Server 2012+
+            order_sql = " ORDER BY (SELECT NULL)"
 
-        sql = "SELECT " + ", ".join(select_parts) + f" FROM {table_sql}"
+        select_kw = "SELECT"
+        limit_sql = ""
+        if self.config.is_mssql:
+            # SQL Server 2012+: TOP is simplest and widely compatible
+            select_kw = f"SELECT TOP ({limit})"
+        else:
+            limit_sql = f" LIMIT {limit}"
+
+        sql = f"{select_kw} " + ", ".join(select_parts) + f" FROM {table_sql}"
         if where_parts:
             sql += " WHERE " + " AND ".join(where_parts)
         if group_parts:
@@ -96,8 +97,16 @@ class SqlCompiler:
         if having_parts:
             sql += " HAVING " + " AND ".join(having_parts)
         sql += order_sql
-        sql += f" LIMIT {limit}"
+        sql += limit_sql
         return sql, warnings
+
+    def _format_table(self, table: str) -> str:
+        if self.config.dialect == "sqlite":
+            return table.split(".")[-1]
+        if self.config.is_mssql:
+            parts = [p for p in table.split(".") if p]
+            return ".".join(f"[{p}]" for p in parts)
+        return table
 
     def _dim_field(self, dataset: dict, dim_or_field: str) -> str:
         dim = self.catalog.dimensions.get(dim_or_field)
@@ -106,7 +115,6 @@ class SqlCompiler:
         fields = dataset.get("fields") or {}
         if dim_or_field in fields or dim_or_field in (dataset.get("available_dimensions") or []):
             return dim_or_field
-        # allow time/entity fields
         if dim_or_field in (
             dataset.get("primary_time_field"),
             dataset.get("entity_field"),

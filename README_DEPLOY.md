@@ -408,7 +408,9 @@ PRD：`prd/v1.9_strategic-office-finance-bi.md`
 bash scripts/validate-expert-template.sh bi-strategic-office
 bash scripts/create-instance.sh bi-strategic-office 8790 bi-strategic-office
 # 配置只读库（勿提交密码）
-# FINANCE_BI_DSN=postgresql+psycopg://readonly:...@host:5432/bi
+# SQL Server 2012+:
+# FINANCE_BI_DSN=mssql+pymssql://readonly:...@host:1433/bi
+# FINANCE_BI_DIALECT=mssql
 # FINANCE_BI_ALLOWED_ENTITIES=HK01
 bash scripts/sync-runtime-env.sh bi-strategic-office
 bash scripts/up-instance.sh bi-strategic-office

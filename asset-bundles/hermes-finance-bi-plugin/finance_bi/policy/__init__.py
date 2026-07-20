@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Set
+from typing import Set
 
 import sqlglot
 from sqlglot import exp
@@ -34,7 +34,7 @@ class SqlPolicy:
         if ";" in text.rstrip(";"):
             raise FinanceBiError(ErrorCode.QUERY_POLICY_VIOLATION, "multi-statement SQL forbidden")
 
-        dialect = "postgres" if self.config.dialect == "postgresql" else self.config.dialect
+        dialect = self.config.sqlglot_dialect
         try:
             statements = sqlglot.parse(text, read=dialect)
         except Exception as exc:  # noqa: BLE001
@@ -55,18 +55,15 @@ class SqlPolicy:
                 )
 
         if not isinstance(tree, (exp.Select, exp.With)):
-            # WITH ... SELECT is With; plain Select is Select
             if not (isinstance(tree, exp.With) or tree.find(exp.Select)):
                 raise FinanceBiError(ErrorCode.QUERY_POLICY_VIOLATION, "only SELECT/WITH allowed")
 
-        # table whitelist
         for table in tree.find_all(exp.Table):
             name = table.name
             db = table.db
             full = f"{db}.{name}" if db else name
             short = name
             if full not in allowed_tables and short not in allowed_tables:
-                # also allow schema.table vs table
                 ok = False
                 for allowed in allowed_tables:
                     if allowed.endswith("." + short) or allowed == short or allowed == full:
@@ -83,9 +80,17 @@ class SqlPolicy:
                     f"schema not allowed: {db}",
                 )
 
-        # must have LIMIT
-        if not tree.find(exp.Limit):
-            raise FinanceBiError(ErrorCode.QUERY_POLICY_VIOLATION, "LIMIT is required")
+        has_limit = bool(tree.find(exp.Limit))
+        has_top = bool(getattr(exp, "Top", None) and tree.find(exp.Top))
+        has_fetch = bool(getattr(exp, "Fetch", None) and tree.find(exp.Fetch))
+        # Fallback text check for TOP (n) if sqlglot version differs
+        if not (has_limit or has_top or has_fetch):
+            upper = text.upper()
+            if " TOP (" not in upper and " TOP(" not in upper and " FETCH " not in upper:
+                raise FinanceBiError(
+                    ErrorCode.QUERY_POLICY_VIOLATION,
+                    "row limit is required (LIMIT / TOP / FETCH)",
+                )
 
         return text
 

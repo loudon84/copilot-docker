@@ -1,0 +1,64 @@
+---
+description: 区分项目 README 与 expert-templates 说明档的创建/更新义务
+globs: expert-templates/**/*,README.md
+alwaysApply: true
+---
+
+# 专家模板文档分工
+
+涉及 `expert-templates/` 下**专家**或**专家团队**模板时，按下列规则同步文档。基础设施模板（如 `base/`、`default/`）不适用本规则。
+
+## 文档职责划分
+
+| 文档 | 职责 |
+|------|------|
+| `expert-templates/<id>/README.md` | 该模板的完整说明：专家描述、能力边界、注入/校验/诊断脚本、运行时要点 |
+| 仓库根 `README.md` | **仅登记新增**专家/团队：路径 + 一句话简述；**不**记录后续更新 changelog |
+
+## 1. 新建模板 → 必须创建模板 README
+
+在 `expert-templates/<id>/` 新建专家或专家团队时，**必须**同步创建同目录 `README.md`，至少包含：
+
+1. **专家描述**：定位、职责、与相近专家的边界（若有）
+2. **注入与运维脚本**：创建实例、注入、重启、校验/诊断的可复制命令
+3. **团队模板**（含 `team.yaml`）：注明团队结构要点，并写明走 `inject-expert-team.sh`（或 `inject-expert.sh` 自动转调）的用法
+
+```bash
+# 单专家示例
+bash scripts/inject-expert.sh <instance> <template-id>
+bash scripts/restart-instance.sh <instance>
+
+# 专家团队示例（目录含 team.yaml）
+bash scripts/inject-expert-team.sh <instance> <template-id>
+# 或：bash scripts/inject-expert.sh <instance> <template-id>
+```
+
+## 2. 更新模板 → 必须更新对应 README
+
+修改已有专家/团队模板（SOUL、skills、semantic、plugins、`team.yaml`、`config.patch.yaml`、注入行为等）时：
+
+- **必须**把变更要点写回 `expert-templates/<id>/README.md`
+- **禁止**只改模板文件却不更新该目录 README
+- **禁止**把「本次改了什么」的更新流水账写进根 `README.md`
+
+## 3. 根 README → 只记新增，不记更新
+
+新建专家/团队并完成模板 README 后，在根 `README.md` **仅追加**：
+
+- 模板路径（如 `expert-templates/<id>/`）
+- 一句话简述（职责/场景）
+
+可选：指向该模板 README 或 PRD 的链接。  
+**不要**在根 README 维护该专家的详细部署步骤、工具清单或历次变更说明——这些放在模板目录 `README.md`。
+
+## 完成前自检
+
+```txt
+新建 expert-templates/<id>/ ?
+  ├─ 有 README.md（描述 + 注入脚本）？
+  └─ 根 README.md 已追加路径 + 简述（非详情）？
+
+更新 expert-templates/<id>/ ?
+  ├─ 对应 README.md 已同步变更？
+  └─ 未向根 README.md 追加更新流水账？
+```

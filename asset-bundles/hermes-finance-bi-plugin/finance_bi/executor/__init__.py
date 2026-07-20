@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 from finance_bi.config import FinanceBiConfig
 from finance_bi.contracts import ErrorCode, FinanceBiError
@@ -28,10 +28,12 @@ class QueryExecutor:
             ) from exc
 
         dsn = self.config.dsn
+        connect_args: Dict[str, Any] = {}
         if self.config.dialect == "sqlite" and dsn.startswith("sqlite"):
             connect_args = {"check_same_thread": False}
-        else:
-            connect_args = {}
+        elif self.config.is_mssql:
+            # pymssql / pyodbc login timeout
+            connect_args = {"timeout": int(self.config.query_timeout_seconds)}
 
         try:
             engine = _ENGINE_CACHE.get(dsn)
@@ -54,7 +56,6 @@ class QueryExecutor:
         started = time.perf_counter()
         try:
             with engine.connect() as conn:
-                # read-only transaction where supported
                 trans = conn.begin()
                 try:
                     if self.config.dialect == "postgresql":
@@ -67,6 +68,13 @@ class QueryExecutor:
                             conn.execute(text("SET TRANSACTION READ ONLY"))
                         except Exception:  # noqa: BLE001
                             pass
+                    elif self.config.is_mssql:
+                        # LOCK_TIMEOUT in milliseconds
+                        conn.execute(
+                            text(
+                                f"SET LOCK_TIMEOUT {int(self.config.query_timeout_seconds) * 1000}"
+                            )
+                        )
                     result = conn.execute(text(sql))
                     keys = list(result.keys())
                     rows = [dict(zip(keys, row)) for row in result.fetchall()]
@@ -78,7 +86,7 @@ class QueryExecutor:
             raise
         except Exception as exc:  # noqa: BLE001
             msg = str(exc).lower()
-            if "timeout" in msg or "canceling statement" in msg:
+            if "timeout" in msg or "canceling statement" in msg or "lock request" in msg:
                 raise FinanceBiError(ErrorCode.QUERY_TIMEOUT, "query timed out") from exc
             raise FinanceBiError(
                 ErrorCode.DATASOURCE_UNAVAILABLE,
@@ -92,7 +100,6 @@ class QueryExecutor:
         return keys, rows, elapsed_ms
 
     def probe_readonly(self) -> Dict[str, Any]:
-        """Best-effort readonly probe for doctor script."""
         if not self.config.dsn:
             return {"ok": False, "reason": "DSN empty"}
         try:
@@ -102,9 +109,14 @@ class QueryExecutor:
             with engine.connect() as conn:
                 conn.execute(text("SELECT 1"))
                 if self.config.dialect == "postgresql":
-                    # attempt a write that should fail on readonly role
                     try:
                         conn.execute(text("CREATE TEMP TABLE finance_bi_write_probe(id int)"))
+                        return {"ok": False, "reason": "write succeeded; account may not be readonly"}
+                    except Exception:  # noqa: BLE001
+                        return {"ok": True, "readonly": True}
+                if self.config.is_mssql:
+                    try:
+                        conn.execute(text("SELECT 1 INTO #finance_bi_write_probe"))
                         return {"ok": False, "reason": "write succeeded; account may not be readonly"}
                     except Exception:  # noqa: BLE001
                         return {"ok": True, "readonly": True}
