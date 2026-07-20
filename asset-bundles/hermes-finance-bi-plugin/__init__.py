@@ -2,6 +2,14 @@
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
+# Hermes loads plugins by path; ensure nested `finance_bi` package is importable.
+_ROOT = Path(__file__).resolve().parent
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
+
 from . import schemas
 from .finance_bi.handlers import tools as handlers
 
