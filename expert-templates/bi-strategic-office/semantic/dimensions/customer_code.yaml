@@ -4,4 +4,5 @@ field: customer_code
 type: string
 datasets:
   - product_profit_daily
+  - ebs1_cux_ar_gp_details
 sensitive: true

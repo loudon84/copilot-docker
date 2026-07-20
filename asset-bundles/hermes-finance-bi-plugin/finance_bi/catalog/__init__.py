@@ -125,7 +125,8 @@ class SemanticCatalog:
         return self._alias_to_dimension.get((token or "").strip().lower())
 
     def search(self, query: str = "", kind: str = "all") -> Dict[str, Any]:
-        q = (query or "").strip().lower()
+        q = str(query or "").strip().lower()
+        kind = str(kind or "all").strip().lower()
         result: Dict[str, Any] = {"datasets": [], "metrics": [], "dimensions": []}
 
         def match(text: str) -> bool:

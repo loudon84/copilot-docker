@@ -207,7 +207,7 @@ def json_err(exc: BaseException) -> str:
             "status": "error",
             "error_code": ErrorCode.INTERNAL_ERROR.value,
             "message": "internal error",
-            "details": {"reason": type(exc).__name__},
+            "details": {"reason": type(exc).__name__, "detail": str(exc)},
         },
         ensure_ascii=False,
     )

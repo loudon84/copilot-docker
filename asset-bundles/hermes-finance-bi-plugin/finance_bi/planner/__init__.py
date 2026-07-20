@@ -36,12 +36,54 @@ def parse_quarter_range(text: str) -> Optional[Tuple[str, str]]:
 
 
 class QueryPlanner:
+    DEFAULT_DATASET = "ebs1_cux_ar_gp_details"
+
     def __init__(self, catalog: SemanticCatalog, config: FinanceBiConfig):
         self.catalog = catalog
         self.config = config
 
+    def _resolve_dataset_id(self) -> str:
+        preferred = self.DEFAULT_DATASET
+        if preferred in self.catalog.datasets:
+            return preferred
+        if not self.catalog.datasets:
+            raise FinanceBiError(ErrorCode.CATALOG_NOT_READY, "no datasets loaded")
+        return next(iter(self.catalog.datasets))
+
+    def _dataset_fields(self, dataset: dict) -> set[str]:
+        return set((dataset.get("fields") or {}).keys())
+
+    def _dimension_allowed(self, dataset: dict, dim: str) -> bool:
+        if dim in (dataset.get("available_dimensions") or []):
+            return True
+        if dim in self._dataset_fields(dataset):
+            return True
+        return False
+
+    def _pick_dimensions(self, text: str, dataset: dict) -> List[str]:
+        candidates: List[str] = []
+        if "品牌" in text:
+            candidates.extend(["brand_name", "brand_code"])
+        if "客户" in text:
+            candidates.extend(["customer_name", "customer_code"])
+        if "区域" in text or "销售区域" in text:
+            candidates.extend(["sales_region", "com_first_layer"])
+        if "主体" in text or "OU" in text.upper():
+            candidates.append("ou_name")
+        if "产品" in text:
+            candidates.extend(["product_code", "product_name", "brand_name"])
+        if not candidates:
+            # Prefer brand/customer for GP detail; fall back to demo product dims
+            candidates = ["brand_name", "customer_name", "product_code", "product_name"]
+
+        out: List[str] = []
+        for dim in candidates:
+            if self._dimension_allowed(dataset, dim) and dim not in out:
+                out.append(dim)
+        return out
+
     def plan(self, question: str) -> SemanticQuery:
-        text = (question or "").strip()
+        text = str(question or "").strip()
         if not text:
             raise FinanceBiError(ErrorCode.INVALID_ARGUMENT, "question is required")
 
@@ -61,12 +103,7 @@ class QueryPlanner:
                 },
             )
 
-        dataset_id = "product_profit_daily"
-        if dataset_id not in self.catalog.datasets:
-            # pick first available
-            if not self.catalog.datasets:
-                raise FinanceBiError(ErrorCode.CATALOG_NOT_READY, "no datasets loaded")
-            dataset_id = next(iter(self.catalog.datasets))
+        dataset_id = self._resolve_dataset_id()
         dataset = self.catalog.datasets[dataset_id]
 
         metrics: List[str] = []
@@ -96,18 +133,9 @@ class QueryPlanner:
                     f"metric {mid} not available on dataset {dataset_id}",
                 )
 
-        dimensions: List[str] = []
-        if "区域" in text or "销售区域" in text:
-            dimensions.append("sales_region")
-        if "客户" in text:
-            dimensions.extend(["customer_code", "customer_name"])
-        if "产品" in text or not dimensions:
-            for d in ("product_code", "product_name"):
-                if d not in dimensions:
-                    dimensions.append(d)
-
+        dimensions = self._pick_dimensions(text, dataset)
         for did in dimensions:
-            if did not in (dataset.get("available_dimensions") or []):
+            if not self._dimension_allowed(dataset, did):
                 raise FinanceBiError(
                     ErrorCode.DIMENSION_NOT_FOUND,
                     f"dimension {did} not available on dataset {dataset_id}",
@@ -127,11 +155,11 @@ class QueryPlanner:
             if "gross_margin" not in metrics:
                 metrics.append("gross_margin")
 
-        # entity hints
+        entity_field = str(dataset.get("entity_field") or "entity_code")
         if "香港" in text or "HK01" in text.upper():
-            filters.append(FilterClause(field="entity_code", operator="eq", value="HK01"))
+            filters.append(FilterClause(field=entity_field, operator="eq", value="HK01"))
         if "新加坡" in text or "SG01" in text.upper():
-            filters.append(FilterClause(field="entity_code", operator="eq", value="SG01"))
+            filters.append(FilterClause(field=entity_field, operator="eq", value="SG01"))
 
         order_by: List[OrderByClause] = []
         if "毛利" in text or "利润" in text:
@@ -160,7 +188,7 @@ class QueryPlanner:
         )
 
     def apply_followup(self, base: SemanticQuery, instruction: str) -> SemanticQuery:
-        text = (instruction or "").strip()
+        text = str(instruction or "").strip()
         if not text:
             raise FinanceBiError(ErrorCode.INVALID_ARGUMENT, "instruction is required")
 
@@ -168,11 +196,11 @@ class QueryPlanner:
         dataset = self.catalog.datasets[q.dataset]
 
         if "区域" in text or "销售区域" in text:
-            if "sales_region" not in q.dimensions:
-                q.dimensions.append("sales_region")
-            # keep product dims unless user says only region
+            region_dim = "sales_region" if self._dimension_allowed(dataset, "sales_region") else "com_first_layer"
+            if region_dim not in q.dimensions and self._dimension_allowed(dataset, region_dim):
+                q.dimensions.append(region_dim)
             if "只按" in text or "按销售区域拆分" in text:
-                q.dimensions = ["sales_region"]
+                q.dimensions = [region_dim] if self._dimension_allowed(dataset, region_dim) else q.dimensions
 
         m = _MARGIN_LT_RE.search(text)
         if m:
@@ -184,7 +212,7 @@ class QueryPlanner:
 
         if "客户" in text:
             for d in ("customer_code", "customer_name"):
-                if d not in q.dimensions and d in (dataset.get("available_dimensions") or []):
+                if d not in q.dimensions and self._dimension_allowed(dataset, d):
                     q.dimensions.append(d)
 
         top = _TOP_N_RE.search(text)

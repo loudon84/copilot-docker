@@ -131,7 +131,12 @@ def build_dataset_yaml(table_name: str, columns: list[dict[str, Any]]) -> dict[s
         "entity_field": entity_field[0] if entity_field else None,
         "currency_field": (pick(["currency_code", "report_currency", "currency"], all_cols) or [None])[0],
         "available_dimensions": sorted(set(dim_candidates))[:40],
-        "available_metrics": sorted(set(metric_candidates))[:40],
+        "available_metrics": [
+            "net_sales_amount",
+            "cogs_amount",
+            "gross_profit_amount",
+            "gross_margin",
+        ],
         "allowed_joins": [],
         "data_updated_at_field": None,
         "use_cases": ["授权分销销售毛利报表", "产品/客户毛利分析"],

@@ -29,6 +29,48 @@ from finance_bi.policy import SqlPolicy  # noqa: E402
 def bi_env(tmp_path: Path):
     catalog_dir = tmp_path / "semantic"
     shutil.copytree(TEMPLATE_SEMANTIC, catalog_dir)
+    # Unit tests keep the SQLite demo dataset; remove production GP detail catalog.
+    (catalog_dir / "datasets" / "ebs1_cux_ar_gp_details.yaml").unlink(missing_ok=True)
+    # Drop GP-only dimension defs that require ebs1 dataset.
+    for dim_file in ("brand_name.yaml", "ou_name.yaml"):
+        (catalog_dir / "dimensions" / dim_file).unlink(missing_ok=True)
+    for dim_file in ("customer_code.yaml", "customer_name.yaml"):
+        p = catalog_dir / "dimensions" / dim_file
+        if p.exists():
+            text = p.read_text(encoding="utf-8")
+            text = text.replace("\n  - ebs1_cux_ar_gp_details", "")
+            p.write_text(text, encoding="utf-8")
+    # Metrics in template point at DW columns; rewrite for SQLite fixture columns.
+    metrics_dir = catalog_dir / "metrics"
+    (metrics_dir / "net_sales_amount.yaml").write_text(
+        "id: net_sales_amount\nname: 净销售额\naliases: [销售额, 销售收入, 净销售]\n"
+        "description: 扣除退货折扣后的净销售额\nexpression: SUM(net_sales_amount)\n"
+        "aggregation: sum\ncurrency_aware: true\nformat: amount\nversion: 1\n"
+        "datasets:\n  - product_profit_daily\n",
+        encoding="utf-8",
+    )
+    (metrics_dir / "cogs_amount.yaml").write_text(
+        "id: cogs_amount\nname: 销售成本\naliases: [成本, COGS]\n"
+        "description: 销售成本金额\nexpression: SUM(cogs_amount)\n"
+        "aggregation: sum\ncurrency_aware: true\nformat: amount\nversion: 1\n"
+        "datasets:\n  - product_profit_daily\n",
+        encoding="utf-8",
+    )
+    (metrics_dir / "gross_profit_amount.yaml").write_text(
+        "id: gross_profit_amount\nname: 销售毛利\naliases: [毛利, 销售利润, 毛利额]\n"
+        "description: 净销售额减去销售成本\nexpression: SUM(gross_profit_amount)\n"
+        "aggregation: sum\ncurrency_aware: true\nformat: amount\nversion: 1\n"
+        "datasets:\n  - product_profit_daily\n",
+        encoding="utf-8",
+    )
+    (metrics_dir / "gross_margin.yaml").write_text(
+        "id: gross_margin\nname: 毛利率\naliases: [毛利率, gross margin]\n"
+        "description: 聚合后毛利 / 聚合后净销售额\n"
+        "expression: SUM(gross_profit_amount) / NULLIF(SUM(net_sales_amount), 0)\n"
+        "aggregation: ratio\ncurrency_aware: false\nformat: percent\nversion: 1\n"
+        "datasets:\n  - product_profit_daily\ncompute_after_aggregate: true\n",
+        encoding="utf-8",
+    )
     state_db = tmp_path / "state" / "finance_bi.db"
     export_dir = tmp_path / "exports" / "bi"
     export_dir.mkdir(parents=True)

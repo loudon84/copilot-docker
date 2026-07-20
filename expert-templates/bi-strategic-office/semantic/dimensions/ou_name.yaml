@@ -1,0 +1,6 @@
+id: ou_name
+name: 业务主体
+field: ou_name
+type: string
+datasets:
+  - ebs1_cux_ar_gp_details
