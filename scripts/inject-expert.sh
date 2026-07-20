@@ -118,7 +118,8 @@ if [ "$EXPERT" = "bi-strategic-office" ] || [ -d "$TPL_EXPERT/semantic" ]; then
     ensure_env "FINANCE_BI_CATALOG_PATH" "/data/hermes/finance-bi/semantic"
     ensure_env "FINANCE_BI_POLICY_PATH" "/data/hermes/finance-bi/policies"
     ensure_env "FINANCE_BI_ALLOWED_SCHEMAS" "dbo,bi_finance,bi_sales"
-    ensure_env "FINANCE_BI_ALLOWED_ENTITIES" "HK01"
+    ensure_env "FINANCE_BI_ALLOWED_ENTITIES" ""
+    # 空=不按 OU 裁剪。若需限制主体，填真实 ou_code，如 101,104（不是 HK01）
     ensure_env "FINANCE_BI_DEFAULT_CURRENCY" "HKD"
     ensure_env "FINANCE_BI_TIMEZONE" "Asia/Hong_Kong"
     ensure_env "FINANCE_BI_QUERY_TIMEOUT_SECONDS" "30"

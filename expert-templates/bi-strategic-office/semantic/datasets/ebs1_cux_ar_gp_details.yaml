@@ -3,15 +3,18 @@ name: 授权分销销售毛利明细
 physical_table: dbo.ebs1_cux_ar_gp_details
 grain: detail
 primary_time_field: ar_fin_due_date
-entity_field: ou_name
+entity_field: ou_code
 currency_field: null
 available_dimensions:
 - brand_name
 - brand_code
 - customer_name
 - customer_code
+- ou_code
 - ou_name
 - ar_fin_due_date
+- transaction_date
+- ar_trx_number
 - com_first_layer
 - com_second_layer
 - com_third_layer

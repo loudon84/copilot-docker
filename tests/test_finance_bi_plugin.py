@@ -32,7 +32,7 @@ def bi_env(tmp_path: Path):
     # Unit tests keep the SQLite demo dataset; remove production GP detail catalog.
     (catalog_dir / "datasets" / "ebs1_cux_ar_gp_details.yaml").unlink(missing_ok=True)
     # Drop GP-only dimension defs that require ebs1 dataset.
-    for dim_file in ("brand_name.yaml", "ou_name.yaml"):
+    for dim_file in ("brand_name.yaml", "ou_name.yaml", "ou_code.yaml"):
         (catalog_dir / "dimensions" / dim_file).unlink(missing_ok=True)
     for dim_file in ("customer_code.yaml", "customer_name.yaml"):
         p = catalog_dir / "dimensions" / dim_file

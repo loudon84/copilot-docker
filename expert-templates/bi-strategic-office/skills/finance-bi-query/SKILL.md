@@ -18,7 +18,12 @@ metadata:
    - 销售利润报表：`query=销售利润报表`
 
 2. **取数**  
-   用 `finance_bi_ask`。后续筛选/下钻用 `finance_bi_followup(base_query_id=...)`。
+   用 `finance_bi_ask`。后续筛选/下钻用 `finance_bi_followup(base_query_id=...)`。  
+   - 按客户：`客户 天地偉業技術有限公司 交易明细，返回 10 条`  
+   - **禁止**用 terminal / Docker 沙箱 / 手工 SQL 查库。  
+   - **`FINANCE_BI_ALLOWED_ENTITIES`**：OU 主体白名单，填 `ou_code`（如 `101,104`）。  
+     为空只表示不做 OU 裁剪，**不影响** `customer_name` 过滤。  
+     填 `HK01` 无效（本表没有该值）。
 
 3. **口径解释**  
    用 `finance_bi_explain(metric=...)` 或 `topic=...`。

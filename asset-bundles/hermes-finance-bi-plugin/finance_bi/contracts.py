@@ -60,6 +60,8 @@ class SemanticQuery:
     limit: int = 200
     metric_versions: Dict[str, int] = field(default_factory=dict)
     title: str = ""
+    # aggregate = GROUP BY + SUM; detail = row-level lines (no GROUP BY)
+    mode: str = "aggregate"
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -71,6 +73,7 @@ class SemanticQuery:
             "limit": self.limit,
             "metric_versions": dict(self.metric_versions),
             "title": self.title,
+            "mode": self.mode or "aggregate",
         }
 
     @classmethod
@@ -84,4 +87,5 @@ class SemanticQuery:
             limit=int(data.get("limit") or 200),
             metric_versions=dict(data.get("metric_versions") or {}),
             title=str(data.get("title") or ""),
+            mode=str(data.get("mode") or "aggregate"),
         )

@@ -30,6 +30,12 @@ Expert: bi-strategic-office
 6. 导出文件存放于 `/data/hermes/workspace/exports/bi/`。
 7. 禁止将凭证、DSN、完整结果集或敏感客户明细写入长期记忆或 Obsidian。
 8. 需要专项聚焦时，用 `delegate_task` 配合 skills 下角色提示；不要创建永久 Profile。
+9. **`FINANCE_BI_ALLOWED_ENTITIES` 是 OU 主体白名单，填 `ou_code`（如 `101,104`），不是 HK01，也不是客户名。**  
+   - 为空：不按 OU 裁剪，**仍可**按客户名查询。  
+   - 警告「ALLOWED_ENTITIES is empty」≠ 不能查客户。  
+10. **禁止使用 terminal / Docker 沙箱执行 SQL**，禁止让用户去 DataGrip/Navicat 手跑 SQL。  
+    取数只能调用 `finance_bi_ask` / `finance_bi_followup`。  
+11. 要明细时写明「明细」和条数，例如：「客户 天地偉業技術有限公司 交易明细，返回 10 条」。
 
 ## 输出契约
 

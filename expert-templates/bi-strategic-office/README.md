@@ -62,7 +62,8 @@ FINANCE_BI_DIALECT=mssql
 FINANCE_BI_CATALOG_PATH=/data/hermes/finance-bi/semantic
 FINANCE_BI_POLICY_PATH=/data/hermes/finance-bi/policies
 FINANCE_BI_ALLOWED_SCHEMAS=bi_finance,bi_sales
-FINANCE_BI_ALLOWED_ENTITIES=HK01
+FINANCE_BI_ALLOWED_ENTITIES=
+# 生产表主体字段为 ou_code（101/104/…），不是 HK01
 FINANCE_BI_DEFAULT_CURRENCY=HKD
 FINANCE_BI_TIMEZONE=Asia/Hong_Kong
 FINANCE_BI_QUERY_TIMEOUT_SECONDS=30
@@ -82,7 +83,9 @@ bash scripts/up-instance.sh bi-strategic-office
 说明：
 
 - 数据库账号必须为**只读**
-- `FINANCE_BI_ALLOWED_ENTITIES` 为实例级主体白名单（MVP 全实例共享同一权限）
+- `FINANCE_BI_ALLOWED_ENTITIES` 为实例级 **OU 主体白名单**，对本表填 `ou_code`（如 `101,104`），不是 `HK01`，也不是客户名
+- 为空时不做 OU 裁剪；客户过滤走 `customer_name`，与 ALLOWED_ENTITIES 无关
+- BI 专家已禁用 `terminal` / `code_execution`，禁止 Docker 沙箱手跑 SQL
 - 本地联调可用 SQLite：`FINANCE_BI_DIALECT=sqlite` + `FINANCE_BI_DSN=sqlite:////data/hermes/finance-bi/state/demo.db`（需自备表结构）
 
 ## 健康检查

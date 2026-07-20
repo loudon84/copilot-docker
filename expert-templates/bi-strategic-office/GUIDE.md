@@ -130,7 +130,8 @@ FINANCE_BI_DSN=mssql+pymssql://AIUser:PASSWORD@192.168.99.37:1433/DW_TEMP
 FINANCE_BI_DIALECT=mssql
 FINANCE_BI_TDS_VERSION=7.0
 FINANCE_BI_ALLOWED_SCHEMAS=dbo
-FINANCE_BI_ALLOWED_ENTITIES=   # 按实际主体字段值填写，如有
+FINANCE_BI_ALLOWED_ENTITIES=
+# 若需按经营单位裁剪，填真实 ou_code，例如 101,104（对应 OU_101_…）；不要填 HK01
 FINANCE_BI_CATALOG_PATH=/data/hermes/finance-bi/semantic
 FINANCE_BI_POLICY_PATH=/data/hermes/finance-bi/policies
 ```

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import List, Set, Tuple
+import re
+from typing import List, Optional, Tuple
 
 from finance_bi.catalog import SemanticCatalog
 from finance_bi.config import FinanceBiConfig
@@ -9,6 +10,8 @@ from finance_bi.contracts import ErrorCode, FinanceBiError, SemanticQuery
 
 class SqlCompiler:
     """Deterministic SemanticQuery -> SQL compiler (no LLM SQL)."""
+
+    _SUM_RE = re.compile(r"(?is)^\s*SUM\s*\((.*)\)\s*$")
 
     def __init__(self, catalog: SemanticCatalog, config: FinanceBiConfig):
         self.catalog = catalog
@@ -28,6 +31,7 @@ class SqlCompiler:
             )
 
         table_sql = self._format_table(table)
+        detail = str(query.mode or "aggregate").lower() == "detail"
 
         select_parts: List[str] = []
         group_parts: List[str] = []
@@ -38,17 +42,29 @@ class SqlCompiler:
         for dim in query.dimensions:
             field = self._dim_field(dataset, dim)
             select_parts.append(f"{field} AS {dim}")
-            group_parts.append(field)
+            if not detail:
+                group_parts.append(field)
 
         for mid in query.metrics:
             metric = self.catalog.metrics[mid]
             expr = str(metric.get("expression") or "")
             if not expr:
                 raise FinanceBiError(ErrorCode.METRIC_NOT_FOUND, f"metric expression missing: {mid}")
-            select_parts.append(f"({expr}) AS {mid}")
+            if detail:
+                # Skip ratio metrics in detail mode; unwrap SUM(col) -> col
+                if str(metric.get("aggregation") or "").lower() == "ratio" or "/" in expr:
+                    warnings.append(f"detail mode skipped ratio metric: {mid}")
+                    continue
+                detail_expr = self._unwrap_sum(expr)
+                select_parts.append(f"({detail_expr}) AS {mid}")
+            else:
+                select_parts.append(f"({expr}) AS {mid}")
+
+        if not select_parts:
+            raise FinanceBiError(ErrorCode.INVALID_ARGUMENT, "query has no selectable columns")
 
         for flt in query.filters:
-            if flt.field in query.metrics or flt.field in self.catalog.metrics:
+            if (not detail) and (flt.field in query.metrics or flt.field in self.catalog.metrics):
                 mid = flt.field if flt.field in self.catalog.metrics else flt.field
                 metric = self.catalog.metrics.get(mid)
                 if not metric:
@@ -59,12 +75,27 @@ class SqlCompiler:
                 field = self._dim_field(dataset, flt.field)
                 where_parts.append(self._cmp(field, flt.operator, flt.value))
 
-        entity_field = dataset.get("entity_field") or "entity_code"
+        entity_field = str(dataset.get("entity_field") or "entity_code")
         if self.config.allowed_entities:
-            entities = ", ".join(self._quote(e) for e in self.config.allowed_entities)
-            where_parts.append(f"{entity_field} IN ({entities})")
+            # Normalize aliases: OU_101 / ou_101 -> 101 when entity_field is ou_code
+            normalized: List[str] = []
+            for raw in self.config.allowed_entities:
+                val = str(raw).strip()
+                if not val:
+                    continue
+                if entity_field == "ou_code":
+                    m = re.match(r"(?i)^OU[_\-]?(\d+)$", val)
+                    if m:
+                        val = m.group(1)
+                normalized.append(val)
+            if normalized:
+                entities = ", ".join(self._quote(e) for e in normalized)
+                where_parts.append(f"{entity_field} IN ({entities})")
         else:
-            warnings.append("FINANCE_BI_ALLOWED_ENTITIES is empty; no entity filter injected")
+            warnings.append(
+                "FINANCE_BI_ALLOWED_ENTITIES is empty — no OU/主体 scope filter. "
+                "Customer/brand filters still work via WHERE on customer_name etc."
+            )
 
         limit = min(int(query.limit or self.config.default_limit), self.config.hard_limit)
         if limit <= 0:
@@ -75,16 +106,24 @@ class SqlCompiler:
             bits = []
             for ob in query.order_by:
                 direction = "DESC" if str(ob.direction).lower().startswith("d") else "ASC"
-                bits.append(f"{ob.field} {direction}")
-            order_sql = " ORDER BY " + ", ".join(bits)
-        elif self.config.is_mssql:
-            # OFFSET/FETCH requires ORDER BY on SQL Server 2012+
+                field = ob.field
+                # In detail mode order by raw column if metric was skipped
+                if detail and field in self.catalog.metrics:
+                    metric = self.catalog.metrics[field]
+                    if str(metric.get("aggregation") or "").lower() == "ratio" or "/" in str(
+                        metric.get("expression") or ""
+                    ):
+                        continue
+                    field = field  # alias still selected if not skipped
+                bits.append(f"{field} {direction}")
+            if bits:
+                order_sql = " ORDER BY " + ", ".join(bits)
+        if not order_sql and self.config.is_mssql:
             order_sql = " ORDER BY (SELECT NULL)"
 
         select_kw = "SELECT"
         limit_sql = ""
         if self.config.is_mssql:
-            # SQL Server 2012+: TOP is simplest and widely compatible
             select_kw = f"SELECT TOP ({limit})"
         else:
             limit_sql = f" LIMIT {limit}"
@@ -99,6 +138,10 @@ class SqlCompiler:
         sql += order_sql
         sql += limit_sql
         return sql, warnings
+
+    def _unwrap_sum(self, expr: str) -> str:
+        m = self._SUM_RE.match(expr.strip())
+        return m.group(1).strip() if m else expr
 
     def _format_table(self, table: str) -> str:
         if self.config.dialect == "sqlite":
@@ -137,6 +180,12 @@ class SqlCompiler:
             return f"{left} < {self._literal(value)}"
         if op in ("lte", "<="):
             return f"{left} <= {self._literal(value)}"
+        if op in ("like", "contains", "ilike"):
+            text = str(value)
+            if op == "contains" or (op == "like" and "%" not in text and "_" not in text):
+                text = f"%{text}%"
+            # case-insensitive: LOWER both sides (works on mssql/sqlite/pg)
+            return f"LOWER({left}) LIKE LOWER({self._literal(text)})"
         if op == "in":
             if not isinstance(value, (list, tuple)):
                 raise FinanceBiError(ErrorCode.INVALID_ARGUMENT, "IN value must be list")
@@ -153,4 +202,7 @@ class SqlCompiler:
         return self._quote(str(value))
 
     def _quote(self, value: str) -> str:
-        return "'" + value.replace("'", "''") + "'"
+        escaped = value.replace("'", "''")
+        if self.config.is_mssql:
+            return "N'" + escaped + "'"
+        return "'" + escaped + "'"
