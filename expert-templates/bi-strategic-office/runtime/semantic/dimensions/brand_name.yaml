@@ -1,0 +1,6 @@
+id: brand_name
+name: 品牌名称
+field: brand_name
+type: string
+datasets:
+  - ebs1_cux_ar_gp_details

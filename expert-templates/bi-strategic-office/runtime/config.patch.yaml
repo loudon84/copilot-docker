@@ -1,0 +1,39 @@
+agent:
+  max_turns: 40
+  gateway_timeout: 600
+  # BI 专家禁止用 terminal/docker 沙箱跑 SQL；取数只能走 finance-bi 工具
+  disabled_toolsets:
+    - terminal
+    - code_execution
+
+delegation:
+  max_iterations: 20
+  max_concurrent_children: 3
+  max_spawn_depth: 1
+  orchestrator_enabled: true
+
+display:
+  language: zh
+  tool_progress: all
+  show_reasoning: false
+
+memory:
+  nudge_interval: 0
+
+# Hermes general plugins are opt-in (not loaded until listed here).
+plugins:
+  enabled:
+    - hermes-finance-bi-plugin
+
+# 明确把 finance-bi 放进白名单；不依赖 terminal
+platform_toolsets:
+  cli:
+    - finance-bi
+    - clarify
+    - file
+    - skills
+    - session_search
+    - todo
+    - web
+    - memory
+    - delegation

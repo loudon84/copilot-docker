@@ -82,7 +82,27 @@ chown -R 1000:1000 "$DATA_DIR" 2>/dev/null || true
 chmod -R u+rwX,g+rwX "$DATA_DIR" 2>/dev/null || true
 chmod 600 "$INSTANCE_DIR/.env" 2>/dev/null || true
 
-bash "$BASE_DIR/scripts/inject-expert.sh" "$PROFILE" "$EXPERT"
+# Expert package mode (PRD v1.10): expert.yaml + bin/install.sh → package installer.
+# Otherwise fall back to legacy inject-expert.sh. No expert-specific branches here.
+EXPERT_DIR="$BASE_DIR/expert-templates/$EXPERT"
+EXPERT_MANIFEST="$EXPERT_DIR/expert.yaml"
+EXPERT_INSTALLER="$EXPERT_DIR/bin/install.sh"
+if [[ -f "$EXPERT_MANIFEST" && -x "$EXPERT_INSTALLER" ]]; then
+  PACKAGE_MODE=true
+else
+  PACKAGE_MODE=false
+fi
+
+if [[ "$PACKAGE_MODE" == "true" ]]; then
+  echo "[create] expert package mode: $EXPERT"
+  "$EXPERT_INSTALLER" \
+    --profile "$PROFILE" \
+    --instance-dir "$INSTANCE_DIR" \
+    --data-dir "$DATA_DIR" \
+    --repo-root "$BASE_DIR"
+else
+  bash "$BASE_DIR/scripts/inject-expert.sh" "$PROFILE" "$EXPERT"
+fi
 bash "$BASE_DIR/scripts/sync-runtime-env.sh" "$PROFILE"
 
 # 生成 nodeskclaw 连接信息（不含 API key 明文）

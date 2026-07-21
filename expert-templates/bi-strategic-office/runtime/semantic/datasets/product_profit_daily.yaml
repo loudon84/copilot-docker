@@ -1,0 +1,69 @@
+id: product_profit_daily
+name: 产品日销售利润
+physical_table: bi_finance.product_profit_daily
+grain: daily
+primary_time_field: posting_date
+entity_field: entity_code
+currency_field: report_currency
+available_dimensions:
+  - product_code
+  - product_name
+  - sales_region
+  - entity_code
+  - report_currency
+  - posting_date
+  - customer_code
+  - customer_name
+available_metrics:
+  - net_sales_amount
+  - gross_profit_amount
+  - gross_margin
+  - cogs_amount
+allowed_joins: []
+data_updated_at_field: etl_updated_at
+use_cases:
+  - 产品销售利润报表
+  - 毛利率筛选
+  - 区域拆分
+forbidden_use_cases:
+  - 付款核销
+  - 凭证过账
+status: demo
+notes: SQLite/单测演示数据集，生产检索默认忽略。
+fields:
+  posting_date:
+    type: date
+    description: 过账日期
+  entity_code:
+    type: string
+    description: 主体代码
+  product_code:
+    type: string
+    description: 产品编码
+  product_name:
+    type: string
+    description: 产品名称
+  sales_region:
+    type: string
+    description: 销售区域
+  customer_code:
+    type: string
+    description: 客户编码
+  customer_name:
+    type: string
+    description: 客户名称
+  report_currency:
+    type: string
+    description: 报告币种
+  net_sales_amount:
+    type: number
+    description: 净销售额
+  cogs_amount:
+    type: number
+    description: 销售成本
+  gross_profit_amount:
+    type: number
+    description: 销售毛利
+  etl_updated_at:
+    type: timestamp
+    description: ETL 更新时间

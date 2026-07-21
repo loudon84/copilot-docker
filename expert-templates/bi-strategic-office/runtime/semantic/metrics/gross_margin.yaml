@@ -1,0 +1,14 @@
+id: gross_margin
+name: 毛利率
+aliases:
+  - 毛利率
+  - gross margin
+description: 聚合后毛利 / 聚合后净销售额
+expression: SUM(act_gross_profit_usd) / NULLIF(SUM(act_sales_amount_usd), 0)
+aggregation: ratio
+currency_aware: false
+format: percent
+version: 1
+datasets:
+  - ebs1_cux_ar_gp_details
+compute_after_aggregate: true

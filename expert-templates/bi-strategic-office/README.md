@@ -1,10 +1,12 @@
-# bi-strategic-office
+# bi-strategic-office（专家包 v1.10）
 
 财务经营分析办公室（BI 智能问数）：语义目录 → `SemanticQuery` → 确定性 SQL → 只读库。进程内插件 `hermes-finance-bi-plugin`，**不**新增独立查询服务、容器或端口；**禁止**注册原始 SQL Tool。
 
-- **业务使用指南**：[GUIDE.md](GUIDE.md)（问数原理、提问规范、结果解读）
-- 部署与运维：本文下方章节
-- PRD：[`prd/v1.9_strategic-office-finance-bi.md`](../../prd/v1.9_strategic-office-finance-bi.md)
+> **v1.10**：本目录已改造为自包含专家包。后续修改只允许进入本目录（含 `runtime/`、`plugins/`、`bin/`）。旧公共 BI 脚本与根下副本为过渡兼容，新流程不再依赖它们。
+
+- **业务使用指南**：[GUIDE.md](GUIDE.md)
+- **架构 / 安装 / 升级**：[docs/architecture.md](docs/architecture.md) · [docs/installation.md](docs/installation.md) · [docs/upgrade.md](docs/upgrade.md)
+- **PRD**：[prd/bi-strategic-office-prd-v1.10.md](prd/bi-strategic-office-prd-v1.10.md)
 
 ## 能力边界
 
@@ -13,19 +15,27 @@
 | `finance` | 账户、账龄、回款、头寸、资金计划、财务运营 |
 | `bi-strategic-office` | BI 取数、经营分析、产品/客户/区域利润、同比环比、指标口径、管理报告 |
 
-## 模板结构
+## 专家包结构（唯一维护位置）
 
 ```text
 expert-templates/bi-strategic-office/
-├── SOUL.md
-├── config.patch.yaml
-├── skills/                  # bi-office-orchestration, finance-bi-query, finance-performance-analysis 等
-├── semantic/                # datasets / metrics / dimensions / glossary / examples
-├── policies/
-└── README.md
-
-asset-bundles/hermes-finance-bi-plugin/   # Hermes 插件（toolset finance-bi）
+├── expert.yaml / VERSION / CHANGELOG.md
+├── runtime/
+│   ├── SOUL.md
+│   ├── config.patch.yaml
+│   ├── memories/MEMORY.md
+│   ├── skills/                 # 6 个 Skill（含编排角色 references）
+│   ├── policies/
+│   └── semantic/
+├── plugins/hermes-finance-bi-plugin/
+├── bin/                        # install / post-start / update / validate / doctor / …
+├── lib/                        # merge_yaml / package_state / validate_manifest
+├── tests/
+├── docs/
+└── prd/
 ```
+
+过渡期仍保留模板根下 `skills/`、`semantic/`、`policies/`、`SOUL.md` 等旧路径副本，以及 `asset-bundles/hermes-finance-bi-plugin/`；**请勿再改旧副本，改 `runtime/` / `plugins/`**。
 
 ## 插件六工具
 
@@ -38,228 +48,83 @@ finance_bi_validate_result
 finance_bi_export_result
 ```
 
-**返回契约**：取数/目录/解释/校验统一为 `result_type=table`（`columns`/`fields` + `rows`）；口径与过滤在 `meta`。Skill 按用户要求把表格转成摘要/报告等，**不得改写数字**。导出为 `result_type=export`。
-## 本地直连验证（推荐，不经过 Hermes）
-
-注入 Hermes 前，用插件 CLI 直接连库验证问数逻辑：
-
-```powershell
-# 依赖（一次）
-pip install -r asset-bundles/hermes-finance-bi-plugin/requirements.txt
-
-# 健康检查 / 编译 SQL（不执行）
-python scripts/finance_bi_cli.py --catalog expert-templates/bi-strategic-office/semantic doctor
-python scripts/finance_bi_cli.py --env instances/financial-analysis/.env health
-python scripts/finance_bi_cli.py --catalog expert-templates/bi-strategic-office/semantic sql "ar_trx_number=101IN26070199 明细"
-
-# 真实问数（需 .env 中 FINANCE_BI_DSN）
-python scripts/finance_bi_cli.py --env instances/financial-analysis/.env ask "按品牌汇总销售毛利，返回 5 条"
-python scripts/finance_bi_cli.py --env instances/financial-analysis/.env ask "ar_trx_number=101IN26070199 明细"
-python scripts/finance_bi_cli.py --env instances/financial-analysis/.env catalog "毛利"
-```
-
-无实例时也可：
-
-```powershell
-$env:FINANCE_BI_DSN="mssql+pymssql://user:pass@192.168.99.37:1433/DW_TEMP"
-$env:FINANCE_BI_DIALECT="mssql"
-$env:FINANCE_BI_CHARSET="cp936"
-python scripts/finance_bi_cli.py --catalog expert-templates/bi-strategic-office/semantic ask "客户 XXX 交易明细，返回 3 条"
-```
-
-本地冒烟测试（不依赖 Docker）：
-
-```powershell
-python -m pytest tests/test_bi_strategic_office_inject.py tests/test_finance_bi_plugin.py -q
-```
-
-## 创建与注入
+## 创建与启动（新包流程）
 
 ```bash
-# 校验模板（含 SOUL/AGENTS/SKILL：简体中文说明 + 禁止控制字符）
-bash scripts/validate-expert-template.sh bi-strategic-office
-python scripts/lib/check_expert_doc_chars.py expert-templates/bi-strategic-office --require-zh
+# 校验专家包
+bash expert-templates/bi-strategic-office/bin/validate.sh
+bash expert-templates/bi-strategic-office/bin/doctor.sh --package-only
 
-# 创建实例（WebUI 8790，Gateway 28790）
+# 创建实例（自动识别 expert.yaml → 调用 bin/install.sh）
 bash scripts/create-instance.sh bi-strategic-office 8790 bi-strategic-office
-```
 
-`create-instance.sh` 会调用 `inject-expert.sh`，自动完成：模板复制、语义同步、插件安装、`FINANCE_BI_*` 占位写入。
+# 配置只读 DSN 后启动（自动调用 bin/post-start.sh）
+bash scripts/up-instance.sh bi-strategic-office
+
+# 诊断
+bash expert-templates/bi-strategic-office/bin/doctor.sh \
+  --profile bi-strategic-office \
+  --data-dir instances/bi-strategic-office/data/hermes \
+  --container hermes-bi-strategic-office
+```
 
 ## 配置只读 BI 数据源
 
-编辑 `instances/bi-strategic-office/.env`（**勿提交真实密码**）：
+编辑 `instances/<profile>/.env`（**勿提交真实密码**）：
 
 ```env
-# SQL Server 2012+（pymssql）
 FINANCE_BI_DSN=mssql+pymssql://readonly_user:PASSWORD@db-host:1433/bi_db
 FINANCE_BI_DIALECT=mssql
+FINANCE_BI_CHARSET=cp936
 FINANCE_BI_CATALOG_PATH=/data/hermes/finance-bi/semantic
 FINANCE_BI_POLICY_PATH=/data/hermes/finance-bi/policies
 FINANCE_BI_ALLOWED_SCHEMAS=bi_finance,bi_sales
 FINANCE_BI_ALLOWED_ENTITIES=
-# 生产表主体字段为 ou_code（101/104/…），不是 HK01
 FINANCE_BI_DEFAULT_CURRENCY=HKD
 FINANCE_BI_TIMEZONE=Asia/Hong_Kong
-FINANCE_BI_QUERY_TIMEOUT_SECONDS=30
-FINANCE_BI_DEFAULT_LIMIT=200
-FINANCE_BI_HARD_LIMIT=5000
 FINANCE_BI_STATE_DB=/data/hermes/finance-bi/state/finance_bi.db
 FINANCE_BI_EXPORT_DIR=/data/hermes/workspace/exports/bi
+FINANCE_BI_MASK_SENSITIVE=false
 ```
-
-同步到容器内 Hermes 可读的 `data/hermes/.env`：
 
 ```bash
-bash scripts/sync-runtime-env.sh bi-strategic-office
-bash scripts/up-instance.sh bi-strategic-office
+bash scripts/sync-runtime-env.sh <profile>
+bash scripts/up-instance.sh <profile>
 ```
 
-说明：
+## 本地直连验证（不经过 Hermes）
 
-- 数据库账号必须为**只读**
-- `FINANCE_BI_ALLOWED_ENTITIES` 为实例级 **OU 主体白名单**，对本表填 `ou_code`（如 `101,104`），不是 `HK01`，也不是客户名
-- 为空时不做 OU 裁剪；客户过滤走 `customer_name`，与 ALLOWED_ENTITIES 无关
-- BI 专家已禁用 `terminal` / `code_execution`，禁止 Docker 沙箱手跑 SQL
-- 本地联调可用 SQLite：`FINANCE_BI_DIALECT=sqlite` + `FINANCE_BI_DSN=sqlite:////data/hermes/finance-bi/state/demo.db`（需自备表结构）
+```powershell
+pip install -r expert-templates/bi-strategic-office/plugins/hermes-finance-bi-plugin/requirements.txt
+python scripts/finance_bi_cli.py --catalog expert-templates/bi-strategic-office/runtime/semantic doctor
+python scripts/finance_bi_cli.py --env instances/<profile>/.env ask "按品牌汇总销售毛利，返回 5 条"
+```
 
-## 健康检查
+## 专家包测试
 
 ```bash
-bash scripts/check-finance-bi.sh bi-strategic-office
-```
-
-常见输出：
-
-| 输出 | 含义 | 处理 |
-|------|------|------|
-| `WARN: FINANCE_BI_DSN is empty` | 尚未配置只读库，结构检查仍可通过 | 编辑 `.env` 填 DSN → `sync-runtime-env` → `restart-instance` |
-| `PASS: semantic catalog loads` | 语义 YAML 正常 | 无需处理 |
-| `FAIL: config.yaml missing plugins.enabled` | Hermes 插件默认 opt-in，未 enable 不会加载 | 见下方 enable 步骤 |
-
-**重要：插件必须 enable**（仅复制到 `plugins/` 不够）：
-
-```bash
-bash scripts/inject-expert.sh bi-strategic-office bi-strategic-office
-bash scripts/restart-instance.sh bi-strategic-office
-
-# 或手动写入配置
-python3 scripts/lib/enable_finance_bi_plugin.py \
-  --config instances/bi-strategic-office/data/hermes/config.yaml
-bash scripts/restart-instance.sh bi-strategic-office
-```
-
-确认 `config.yaml` 含：
-
-```yaml
-plugins:
-  enabled:
-    - hermes-finance-bi-plugin
-```
-
-若存在 `platform_toolsets`（白名单），还必须包含 `finance-bi`：
-
-```yaml
-platform_toolsets:
-  cli:
-    - browser
-    - finance-bi
-```
-
-实例名可为任意 profile（如 `financial-analysis`），专家模板仍是 `bi-strategic-office`：
-
-```bash
-bash scripts/inject-expert.sh financial-analysis bi-strategic-office
-bash scripts/sync-runtime-env.sh financial-analysis
-bash scripts/restart-instance.sh financial-analysis
-bash scripts/check-finance-bi.sh financial-analysis
-```
-
-确认工具（容器内 CLI 为 `/app/venv/bin/hermes`，不要直接 `| grep` 喂给 hermes）：
-
-```bash
-docker exec -u hermeswebui -e HERMES_HOME=/data/hermes \
-  hermes-financial-analysis bash -lc \
-  'script -qfc "/app/venv/bin/hermes tools --summary" /dev/null' | grep finance_bi
-```
-
-## 访问
-
-```text
-WebUI:  http://服务器IP:8790
-API:    http://服务器IP:28790
-```
-
-查看密码：
-
-```bash
-grep HERMES_WEBUI_PASSWORD instances/bi-strategic-office/.env
+bash expert-templates/bi-strategic-office/bin/test.sh unit
+bash expert-templates/bi-strategic-office/bin/test.sh security
+python -m pytest expert-templates/bi-strategic-office/tests/unit expert-templates/bi-strategic-office/tests/security -q
 ```
 
 ## 运行时目录
 
 ```text
-instances/bi-strategic-office/
-├── .env                          # FINANCE_BI_*（勿提交真实 DSN）
+instances/<profile>/
+├── .env
 └── data/hermes/
-    ├── SOUL.md
-    ├── skills/
-    ├── finance-bi/
-    │   ├── semantic/             # 语义目录
-    │   ├── policies/
-    │   └── state/finance_bi.db   # 查询状态与审计（不含结果集）
+    ├── SOUL.md / config.yaml / skills/
     ├── plugins/hermes-finance-bi-plugin/
-    └── workspace/exports/bi/     # CSV / XLSX 导出
-```
-
-## 日常运维
-
-```bash
-# 更新模板 / 语义目录 / 插件后重新注入（幂等）
-# 实例名示例：financial-analysis；专家模板仍是 bi-strategic-office
-bash scripts/inject-expert.sh financial-analysis bi-strategic-office
-bash scripts/sync-bi-semantic-catalog.sh financial-analysis bi-strategic-office
-bash scripts/sync-runtime-env.sh financial-analysis
-bash scripts/restart-instance.sh financial-analysis
-
-# 仅同步语义 YAML
-bash scripts/sync-bi-semantic-catalog.sh financial-analysis bi-strategic-office
-
-# 停止
-bash scripts/down-instance.sh financial-analysis
-```
-
-**目录探查**：问「销售利润报表有哪些数据集 / 日期字段」时，工具返回目录表格（`result_kind` 以 `catalog_` 开头，不查业务库）；完整分类见 `meta.tables`。生产主表 `ebs1_cux_ar_gp_details`，主时间字段 `ar_fin_due_date`。
-
-### 变更摘要（工具返回契约）
-
-- 统一表格行返回：`result_type=table` + `columns`/`fields` + `rows`
-- 废弃依赖 `output_mode=table_and_summary` 做呈现；呈现由 Skill 完成
-- 目录/解释/校验同样表格化；导出仍为文件（`result_type=export`）
-
-### 变更摘要（禁止默认脱敏）
-
-- 问数专家默认明文返回客户名/编码；`FINANCE_BI_MASK_SENSITIVE=false`
-- SOUL/Skill 禁止向用户声称「保密策略掩码不可修改」
-- `customer_name` / `customer_code` 维度 `sensitive: false`；策略 `mask_sensitive_dimensions: []`
-
-### 变更摘要（过滤与中文编码）
-
-- 单据号/`field=value` 会写入 SQL WHERE，followup 不是在上一批 TOP N 行上内存过滤
-- MSSQL 默认 `FINANCE_BI_CHARSET=cp936`，并修复常见 GBK 乱码回显
-- 时间过滤只从日期/日历格式提取（ISO / `2026Q2` / `yyyy年m月d日`），禁止从单据号等编号猜时间；可用「不限时间」清除
-
-## 单测
-
-```bash
-python -m pytest tests/test_finance_bi_plugin.py tests/test_bi_strategic_office_inject.py -q
+    ├── finance-bi/
+    │   ├── semantic/ / policies/ / state/ / cache/
+    │   └── package-state.yaml
+    └── workspace/exports/bi/
 ```
 
 ## 安全约束
 
 - 禁止向 Hermes 注册 `execute_sql` / `run_raw_sql` / `query_database`
-- 查询经 SQL AST 校验：仅 SELECT/WITH、强制 LIMIT、schema/表白名单、主体过滤
+- 查询经 SQL AST 校验：仅 SELECT/WITH、强制 LIMIT、schema/表白名单
 - 审计库不保存完整结果集与数据库密码
-- 未接入用户级动态权限前：勿作多租户公网服务、勿配置全公司无限制账号
-
-更细的部署清单见 [README_DEPLOY.md §10.2](../../README_DEPLOY.md)。
+- 专家包内禁止包含 `.env`、真实 DSN、运行状态数据库

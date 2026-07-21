@@ -1,0 +1,21 @@
+[project]
+name = "hermes-finance-bi-plugin"
+version = "1.10.0"
+description = "Read-only financial BI semantic query plugin for Hermes"
+requires-python = ">=3.11"
+dependencies = [
+  "sqlalchemy>=2.0,<3",
+  "psycopg[binary]>=3.1,<4",
+  "pymssql>=2.2,<3",
+  "sqlglot>=25.0,<28",
+  "openpyxl>=3.1,<4",
+  "PyYAML>=6.0,<7",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["schemas"]
+packages = ["finance_bi"]

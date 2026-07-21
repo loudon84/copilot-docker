@@ -100,3 +100,29 @@ fi
 echo "Agent API: http://127.0.0.1:${GATEWAY_PORT}"
 echo "Verify: bash scripts/check-agent-api.sh $PROFILE"
 echo "Password: $(grep '^HERMES_WEBUI_PASSWORD=' "$ENV_FILE" | cut -d= -f2-)"
+
+# Expert package post-start hook (PRD v1.10). Generic: no expert-specific branches.
+# On failure: return non-zero, leave container running, print doctor hint.
+INSTANCE_DIR="$BASE_DIR/instances/$PROFILE"
+CONTAINER_NAME="hermes-$PROFILE"
+HERMES_EXPERT="$(grep '^HERMES_EXPERT=' "$ENV_FILE" | cut -d= -f2- || true)"
+if [ -n "$HERMES_EXPERT" ]; then
+  EXPERT_DIR="$BASE_DIR/expert-templates/$HERMES_EXPERT"
+  POST_START="$EXPERT_DIR/bin/post-start.sh"
+  if [ -f "$EXPERT_DIR/expert.yaml" ] && [ -x "$POST_START" ]; then
+    echo "[up] expert package post-start: $HERMES_EXPERT"
+    if ! "$POST_START" \
+      --profile "$PROFILE" \
+      --instance-dir "$INSTANCE_DIR" \
+      --data-dir "$DATA_DIR" \
+      --repo-root "$BASE_DIR" \
+      --container "$CONTAINER_NAME"
+    then
+      echo "ERROR: expert post-start failed for $HERMES_EXPERT" >&2
+      echo "Container $CONTAINER_NAME is still running." >&2
+      echo "Fix, then re-run: bash \"$POST_START\" --profile \"$PROFILE\" --instance-dir \"$INSTANCE_DIR\" --data-dir \"$DATA_DIR\" --repo-root \"$BASE_DIR\" --container \"$CONTAINER_NAME\"" >&2
+      echo "Or diagnose: bash \"$EXPERT_DIR/bin/doctor.sh\" --profile \"$PROFILE\" --data-dir \"$DATA_DIR\" --container \"$CONTAINER_NAME\"" >&2
+      exit 1
+    fi
+  fi
+fi
