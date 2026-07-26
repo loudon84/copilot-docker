@@ -1,9 +1,0 @@
-id: entity_code
-name: 主体
-field: entity_code
-type: string
-aliases:
-  - 公司主体
-  - 核算主体
-datasets:
-  - product_profit_daily

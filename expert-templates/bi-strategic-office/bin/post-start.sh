@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Post-start initialization for bi-strategic-office (PRD v1.10 §15).
+# Post-start initialization for bi-strategic-office (PRD v1.11).
 # Runs after container is up. Does NOT stop the container on failure.
 set -euo pipefail
 
@@ -31,7 +31,8 @@ done
 fail() {
   echo "ERROR: post-start failed: $*" >&2
   echo "Hint: bash \"$PACKAGE_ROOT/bin/doctor.sh\" --profile \"$PROFILE\" --container \"$CONTAINER\"" >&2
-  echo "Hint: container left running; fix then re-run up-instance or post-start" >&2
+  echo "Hint: container left running; fix SQLBOT_* then re-run up-instance or post-start" >&2
+  echo "Hint: do NOT fall back to hermes-finance-bi-plugin" >&2
   exit 1
 }
 
@@ -41,22 +42,19 @@ fail() {
 
 echo "[post-start] profile=$PROFILE container=$CONTAINER"
 
-# 1) Container running
 STATE="$(docker inspect --format '{{.State.Status}}' "$CONTAINER" 2>/dev/null || echo missing)"
 [[ "$STATE" == "running" ]] || fail "container not running (state=$STATE)"
 
-# 2) /data/hermes mounted
 if ! docker exec "$CONTAINER" bash -lc 'test -d /data/hermes'; then
   fail "/data/hermes not mounted in container"
 fi
 
-PLUGIN_HOST="$DATA_DIR/plugins/hermes-finance-bi-plugin"
+PLUGIN_HOST="$DATA_DIR/plugins/hermes-sqlbot-adapter"
 REQ_FILE="$PLUGIN_HOST/requirements.txt"
 [[ -f "$REQ_FILE" ]] || fail "requirements.txt missing at $REQ_FILE"
 
-# 3) Install Python deps with hash dedupe
-HASH_FILE="$DATA_DIR/finance-bi/.requirements.sha256"
-mkdir -p "$DATA_DIR/finance-bi"
+HASH_FILE="$DATA_DIR/sqlbot-adapter/.requirements.sha256"
+mkdir -p "$DATA_DIR/sqlbot-adapter/state" "$DATA_DIR/sqlbot-adapter/audit"
 NEW_HASH=""
 if command -v sha256sum >/dev/null 2>&1; then
   NEW_HASH="$(sha256sum "$REQ_FILE" | awk '{print $1}')"
@@ -76,36 +74,35 @@ if [[ -f "$HASH_FILE" ]]; then
 fi
 
 if [[ "$NEED_PIP" = "1" ]]; then
-  echo "[post-start] installing plugin requirements into /app/venv"
-  docker cp "$REQ_FILE" "$CONTAINER:/tmp/hermes-finance-bi-requirements.txt" \
+  echo "[post-start] installing adapter requirements into /app/venv"
+  docker cp "$REQ_FILE" "$CONTAINER:/tmp/hermes-sqlbot-adapter-requirements.txt" \
     || fail "docker cp requirements"
   docker exec -u root "$CONTAINER" bash -lc '
     set -euo pipefail
-    /app/venv/bin/python -m pip install -r /tmp/hermes-finance-bi-requirements.txt
+    /app/venv/bin/python -m pip install -r /tmp/hermes-sqlbot-adapter-requirements.txt
     chown -R 1000:1000 /app/venv
-  ' || fail "pip install finance-bi requirements"
+  ' || fail "pip install hermes-sqlbot-adapter requirements"
   printf '%s\n' "$NEW_HASH" > "$HASH_FILE"
   echo "[post-start] wrote $HASH_FILE"
 fi
 
-# 4) Plugin directory permissions
 docker exec -u root "$CONTAINER" bash -lc '
-  chown -R 1000:1000 /data/hermes/plugins/hermes-finance-bi-plugin 2>/dev/null || true
-  chmod -R u+rwX,g+rwX /data/hermes/plugins/hermes-finance-bi-plugin 2>/dev/null || true
+  chown -R 1000:1000 /data/hermes/plugins/hermes-sqlbot-adapter 2>/dev/null || true
+  chmod -R u+rwX,g+rwX /data/hermes/plugins/hermes-sqlbot-adapter 2>/dev/null || true
+  mkdir -p /data/hermes/sqlbot-adapter/state /data/hermes/sqlbot-adapter/audit
+  chown -R 1000:1000 /data/hermes/sqlbot-adapter 2>/dev/null || true
 ' || true
 
-# 5) Enable plugin via hermes CLI when available (config already merged at install)
 docker exec -u hermeswebui -e HERMES_HOME=/data/hermes "$CONTAINER" bash -lc '
   if [ -x /app/venv/bin/hermes ]; then
     if command -v script >/dev/null 2>&1; then
-      script -qfc "/app/venv/bin/hermes plugins enable hermes-finance-bi-plugin" /dev/null 2>/dev/null || true
+      script -qfc "/app/venv/bin/hermes plugins enable hermes-sqlbot-adapter" /dev/null 2>/dev/null || true
     else
-      /app/venv/bin/hermes plugins enable hermes-finance-bi-plugin 2>/dev/null || true
+      /app/venv/bin/hermes plugins enable hermes-sqlbot-adapter 2>/dev/null || true
     fi
   fi
 ' || true
 
-# 6) Check plugin / toolset listing
 CLI_OUT="$(
   docker exec -u hermeswebui -e HERMES_HOME=/data/hermes "$CONTAINER" bash -lc '
     if command -v script >/dev/null 2>&1 && [ -x /app/venv/bin/hermes ]; then
@@ -115,22 +112,45 @@ CLI_OUT="$(
   ' 2>/dev/null || true
 )"
 
-if echo "$CLI_OUT" | grep -qiE 'hermes-finance-bi-plugin|finance-bi|Finance-Bi|finance_bi'; then
+if echo "$CLI_OUT" | grep -qiE 'hermes-sqlbot-adapter|finance-bi|Finance-Bi|finance_bi'; then
   echo "[post-start] PASS: plugin/toolset visible in hermes CLI"
 else
   echo "WARN: hermes CLI listing did not clearly show finance-bi; continuing with doctor"
 fi
 
-# 7) Semantic catalog path
-docker exec "$CONTAINER" bash -lc 'test -d /data/hermes/finance-bi/semantic/datasets' \
-  || fail "semantic catalog missing in container"
+if echo "$CLI_OUT" | grep -qiE 'hermes-finance-bi-plugin'; then
+  fail "legacy hermes-finance-bi-plugin still visible — must not coexist with adapter"
+fi
 
-# 8) State dir writable
 docker exec "$CONTAINER" bash -lc '
-  test -d /data/hermes/finance-bi/state && touch /data/hermes/finance-bi/state/.write_probe && rm -f /data/hermes/finance-bi/state/.write_probe
-' || fail "finance-bi/state not writable"
+  test -d /data/hermes/sqlbot-adapter/state && touch /data/hermes/sqlbot-adapter/state/.write_probe && rm -f /data/hermes/sqlbot-adapter/state/.write_probe
+' || fail "sqlbot-adapter/state not writable"
 
-# 9) Doctor
+# Env check (keys only)
+INSTANCE_ENV="${INSTANCE_DIR:-}/.env"
+if [[ -f "$INSTANCE_ENV" ]]; then
+  for key in SQLBOT_MCP_URL SQLBOT_USERNAME SQLBOT_PASSWORD SQLBOT_WORKSPACE_ID SQLBOT_DEFAULT_DATASOURCE_ID; do
+    if ! grep -qE "^${key}=" "$INSTANCE_ENV"; then
+      fail "env missing $key"
+    fi
+  done
+  MCP_URL="$(grep -E '^SQLBOT_MCP_URL=' "$INSTANCE_ENV" | head -1 | cut -d= -f2- || true)"
+  if [[ -z "$MCP_URL" ]]; then
+    fail "SQLBOT_MCP_URL is empty — set SQLBot MCP endpoint then re-run"
+  fi
+  # Connectivity probe (no password printed)
+  if command -v curl >/dev/null 2>&1; then
+    if curl -fsS -o /dev/null --connect-timeout 5 --max-time 15 "$MCP_URL" 2>/dev/null \
+      || curl -fsS -o /dev/null --connect-timeout 5 --max-time 15 -X POST -H 'Content-Type: application/json' -d '{}' "$MCP_URL" 2>/dev/null; then
+      echo "[post-start] PASS: SQLBot MCP URL reachable"
+    else
+      echo "WARN: SQLBot MCP URL probe failed (HTTP may still require auth body) — doctor will recheck"
+    fi
+  fi
+else
+  fail "instance .env missing"
+fi
+
 bash "$PACKAGE_ROOT/bin/doctor.sh" \
   --profile "$PROFILE" \
   --instance-dir "${INSTANCE_DIR:-}" \

@@ -1,0 +1,1 @@
+"""SQLBot MCP client package."""

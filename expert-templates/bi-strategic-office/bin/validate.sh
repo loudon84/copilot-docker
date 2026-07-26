@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Validate bi-strategic-office expert package layout (PRD v1.10 §16).
+# Validate bi-strategic-office expert package layout (PRD v1.11).
 set -euo pipefail
 
 PACKAGE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -48,20 +48,20 @@ require_file "VERSION"
 require_file "runtime/SOUL.md"
 require_file "runtime/memories/MEMORY.md"
 require_file "runtime/config.patch.yaml"
-require_file "plugins/hermes-finance-bi-plugin/plugin.yaml"
-require_file "plugins/hermes-finance-bi-plugin/requirements.txt"
-require_dir "plugins/hermes-finance-bi-plugin"
+require_file "plugins/hermes-sqlbot-adapter/plugin.yaml"
+require_file "plugins/hermes-sqlbot-adapter/requirements.txt"
+require_file "config/sqlbot.example.env"
+require_dir "plugins/hermes-sqlbot-adapter"
 require_dir "runtime/skills"
-require_dir "runtime/semantic"
-require_dir "runtime/policies"
+require_dir "config"
+require_dir "evaluations"
 
-for script in install.sh post-start.sh update.sh validate.sh doctor.sh test.sh sync-semantic-catalog.sh; do
+for script in install.sh post-start.sh update.sh validate.sh doctor.sh test.sh; do
   require_file "bin/$script"
   if [[ -f "$PACKAGE_ROOT/bin/$script" ]]; then
     if [[ -x "$PACKAGE_ROOT/bin/$script" ]]; then
       pass "executable bin/$script"
     else
-      # On Windows checkout may lose +x; still warn but don't hard-fail if readable
       if [[ "$(uname -s 2>/dev/null || true)" == MINGW* ]] || [[ "$(uname -s 2>/dev/null || true)" == MSYS* ]] || [[ -n "${WINDIR:-}" ]]; then
         pass "bin/$script present (Windows: +x may be restored by git)"
       else
@@ -71,20 +71,24 @@ for script in install.sh post-start.sh update.sh validate.sh doctor.sh test.sh s
   fi
 done
 
-# No .env / state db in package
+if [[ -d "$PACKAGE_ROOT/plugins/hermes-finance-bi-plugin" ]]; then
+  fail "legacy hermes-finance-bi-plugin must be removed"
+else
+  pass "legacy plugin absent"
+fi
+
 if [[ -f "$PACKAGE_ROOT/.env" ]]; then
   fail "package must not contain .env"
 else
   pass "no .env in package root"
 fi
 
-if find "$PACKAGE_ROOT" -type f \( -name '*.db' -o -name 'finance_bi.db' \) 2>/dev/null | grep -q .; then
+if find "$PACKAGE_ROOT" -type f \( -name '*.db' -o -name 'finance_bi.db' -o -name 'sqlbot_sessions.db' \) 2>/dev/null | grep -q .; then
   fail "package must not contain runtime state databases"
 else
   pass "no state databases in package"
 fi
 
-# YAML parse via Python helper when available
 PYTHON_BIN="$(command -v python3 || command -v python || true)"
 if [[ -n "$PYTHON_BIN" ]]; then
   if "$PYTHON_BIN" "$PACKAGE_ROOT/lib/validate_manifest.py" --package-root "$PACKAGE_ROOT"; then

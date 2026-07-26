@@ -1,6 +1,0 @@
-id: product_name
-name: 产品名称
-field: product_name
-type: string
-datasets:
-  - product_profit_daily

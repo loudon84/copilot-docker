@@ -1,0 +1,2 @@
+# Plugin-local tests live under expert-templates/bi-strategic-office/tests/
+# This directory is reserved for optional plugin-scoped fixtures.

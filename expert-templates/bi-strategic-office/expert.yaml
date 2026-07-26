@@ -3,9 +3,9 @@ schema_version: 1
 expert:
   id: bi-strategic-office
   name: 财务经营分析办公室
-  version: 1.10.0
+  version: 1.11.0
   type: expert
-  description: 财务分析、BI智能问数和经营分析专家
+  description: 财务分析、SQLBot 智能问数和经营分析专家
 
 compatibility:
   python: ">=3.11"
@@ -20,18 +20,10 @@ assets:
     source: runtime/skills
     target: skills
 
-  policies:
-    source: runtime/policies
-    target: finance-bi/policies
-
-  semantic:
-    source: runtime/semantic
-    target: finance-bi/semantic
-
 plugins:
-  - id: hermes-finance-bi-plugin
-    source: plugins/hermes-finance-bi-plugin
-    target: plugins/hermes-finance-bi-plugin
+  - id: hermes-sqlbot-adapter
+    source: plugins/hermes-sqlbot-adapter
+    target: plugins/hermes-sqlbot-adapter
 
 lifecycle:
   install: bin/install.sh
@@ -42,10 +34,17 @@ lifecycle:
   test: bin/test.sh
 
 runtime_directories:
-  - finance-bi/state
-  - finance-bi/cache
+  - sqlbot-adapter/state
+  - sqlbot-adapter/audit
   - workspace/exports/bi
   - workspace/uploads
+
+required_env:
+  - SQLBOT_MCP_URL
+  - SQLBOT_USERNAME
+  - SQLBOT_PASSWORD
+  - SQLBOT_WORKSPACE_ID
+  - SQLBOT_DEFAULT_DATASOURCE_ID
 
 security:
   allow_raw_sql: false

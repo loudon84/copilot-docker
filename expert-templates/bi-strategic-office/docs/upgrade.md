@@ -1,15 +1,21 @@
-# 升级指南
+# 升级说明
 
-## 版本文件
+## v1.10 → v1.11（SQLBot Adapter）
 
-- 包版本：`VERSION` / `expert.yaml` → `expert.version`
-- 插件版本：`plugins/hermes-finance-bi-plugin/plugin.yaml`
-- 实例状态：`data/hermes/finance-bi/package-state.yaml`
+### 变更摘要
 
-## 升级步骤
+- 问数核心从自研 `hermes-finance-bi-plugin` 切换为 `hermes-sqlbot-adapter` + 外部 SQLBot
+- 删除本地 Semantic Catalog / Policies 安装路径
+- 环境变量从 `FINANCE_BI_*` 切换为 `SQLBOT_*`
+- 工具从 6 个收敛为 4 个（去掉 catalog/validate/export，新增 reset）
 
-1. 更新专家包源码（本仓库 `expert-templates/bi-strategic-office/`）。
-2. 执行：
+### 升级步骤
+
+1. **备份** v1.10 实例目录与 `config.yaml` / `.env`
+2. 在 SQLBot 完成工作空间与元数据配置，填写 `docs/sqlbot-example.md`
+3. 拉取含 v1.11 专家包的代码
+4. 更新实例 `.env`：新增 `SQLBOT_*`（可保留旧 `FINANCE_BI_*` 但不再使用）
+5. 执行专家包更新：
 
 ```bash
 bash expert-templates/bi-strategic-office/bin/update.sh \
@@ -19,22 +25,24 @@ bash expert-templates/bi-strategic-office/bin/update.sh \
   --repo-root .
 ```
 
-3. 重新启动以刷新容器内依赖：
+6. 启动并 doctor：
 
 ```bash
 bash scripts/up-instance.sh <profile>
+bash expert-templates/bi-strategic-office/bin/doctor.sh \
+  --profile <profile> \
+  --data-dir instances/<profile>/data/hermes \
+  --container hermes-<profile>
 ```
 
-## 保护规则
+7. 执行 Golden Questions（见 `evaluations/`）
 
-升级会覆盖模板资产（SOUL、Skills、Plugin、Semantic、Policies），但**不会**：
+### 回滚
 
-- 覆盖 `.env` 中已有 DSN/密码（仅补齐缺失键；部分策略键会 upsert）
-- 清空 `finance-bi/state` / `cache`
-- 删除 `workspace/uploads` / `workspace/exports`
-- 删除 `sessions` / `logs`
-- 覆盖用户已有 `memories/MEMORY.md`
+1. 停止实例
+2. 恢复 Git tag `v1.10` 专家包与实例备份
+3. 恢复 v1.10 `config.yaml` / `.env`（`FINANCE_BI_*`）
+4. 重新 `up-instance.sh`
+5. **不要**修改 SQLBot 内部数据
 
-## 回滚建议
-
-安装前自动写入 `data/hermes/.backup/<timestamp>/`。必要时可从备份恢复 `config.yaml`、skills、semantic。
+v1.11 运行目录中不同时保留新旧插件。

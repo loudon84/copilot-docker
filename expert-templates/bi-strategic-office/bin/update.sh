@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Update installed bi-strategic-office package assets (PRD v1.10 §18).
-# Manual invocation. Preserves runtime user data.
+# Update installed bi-strategic-office package assets (PRD v1.11).
 set -euo pipefail
 
 PACKAGE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -31,16 +30,14 @@ done
 
 PYTHON_BIN="$(command -v python3 || command -v python || true)"
 NEW_VERSION="$(tr -d ' \n\r' < "$PACKAGE_ROOT/VERSION")"
-STATE_FILE="$DATA_DIR/finance-bi/package-state.yaml"
 
 echo "[update] package version=$NEW_VERSION"
-if [[ -f "$STATE_FILE" ]] && [[ -n "$PYTHON_BIN" ]]; then
+if [[ -n "$PYTHON_BIN" ]]; then
   OLD="$("$PYTHON_BIN" "$PACKAGE_ROOT/lib/package_state.py" read --data-dir "$DATA_DIR" 2>/dev/null || true)"
   echo "[update] current package-state:"
   echo "$OLD" | sed 's/^/  /' || true
 fi
 
-# Re-run install (idempotent, preserves runtime data)
 bash "$PACKAGE_ROOT/bin/install.sh" \
   --profile "$PROFILE" \
   --instance-dir "$INSTANCE_DIR" \

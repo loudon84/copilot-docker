@@ -1,0 +1,39 @@
+# Expected SQL / filter rules for golden questions
+
+rules:
+  q_trx_detail:
+    sql_must_be_readonly: true
+    must_contain:
+      - "101IN26070199"
+    must_not:
+      - "DROP"
+      - "DELETE"
+      - "INSERT"
+    reject_if_global_top_n_without_filter: true
+
+  q_product_profit_q2:
+    sql_must_be_readonly: true
+    time_hints:
+      - "2026"
+      - "Q2"
+
+  q_followup_margin:
+    inherits_chat_id: true
+    filter_hints:
+      - "0.05"
+      - "5%"
+
+  q_followup_region:
+    inherits_chat_id: true
+
+  q_top_ar_customers:
+    sql_must_be_readonly: true
+
+  q_overdue_ar:
+    sql_must_be_readonly: true
+
+  q_yoy_profit:
+    sql_must_be_readonly: true
+
+  q_explain_margin:
+    no_sql_execution: true

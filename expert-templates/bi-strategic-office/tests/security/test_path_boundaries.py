@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Security: install paths must stay within instance data dir."""
+"""Security: install paths must stay within instance data dir (v1.11)."""
 
 from __future__ import annotations
 
@@ -12,24 +12,24 @@ def test_install_script_uses_data_dir_args():
     text = (PACKAGE_ROOT / "bin" / "install.sh").read_text(encoding="utf-8")
     assert "--data-dir" in text
     assert "DATA_DIR" in text
-    # Must not hardcode a sibling profile path
+    assert "hermes-sqlbot-adapter" in text
     assert "../other" not in text
     assert "instances/writer" not in text
 
 
-def test_sync_script_scoped_to_data_dir():
-    text = (PACKAGE_ROOT / "bin" / "sync-semantic-catalog.sh").read_text(encoding="utf-8")
-    assert 'SEMANTIC_DST="$DATA_DIR/finance-bi/semantic"' in text
-    assert "scripts/sync-bi-semantic-catalog.sh" not in text
-
-
 def test_package_assets_under_package_root():
     for rel in (
-        "runtime/semantic",
-        "runtime/policies",
         "runtime/skills",
-        "plugins/hermes-finance-bi-plugin",
+        "plugins/hermes-sqlbot-adapter",
+        "config/sqlbot.example.env",
         "bin/install.sh",
         "lib/merge_yaml.py",
+        "evaluations/golden_questions.yaml",
     ):
         assert (PACKAGE_ROOT / rel).exists(), rel
+
+
+def test_legacy_paths_removed():
+    assert not (PACKAGE_ROOT / "plugins" / "hermes-finance-bi-plugin").exists()
+    assert not (PACKAGE_ROOT / "bin" / "sync-semantic-catalog.sh").exists()
+    assert not (PACKAGE_ROOT / "runtime" / "semantic").exists()

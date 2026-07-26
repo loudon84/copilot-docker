@@ -8,7 +8,7 @@ from pathlib import Path
 PACKAGE_ROOT = Path(__file__).resolve().parents[2]
 
 FORBIDDEN_SUFFIXES = {".db", ".sqlite", ".sqlite3"}
-FORBIDDEN_NAMES = {".env", "finance_bi.db"}
+FORBIDDEN_NAMES = {".env", "finance_bi.db", "sqlbot_sessions.db"}
 
 
 def test_no_env_or_state_db_in_package():
@@ -36,3 +36,13 @@ def test_config_patch_has_no_dsn_or_keys():
     assert "password" not in lower
     assert "api_key" not in lower
     assert "api-key" not in lower
+    assert "access_token" not in lower
+
+
+def test_example_env_has_empty_secrets():
+    text = (PACKAGE_ROOT / "config" / "sqlbot.example.env").read_text(encoding="utf-8")
+    assert "SQLBOT_PASSWORD=" in text
+    # Ensure no real-looking password value
+    for line in text.splitlines():
+        if line.startswith("SQLBOT_PASSWORD="):
+            assert line.strip() == "SQLBOT_PASSWORD="

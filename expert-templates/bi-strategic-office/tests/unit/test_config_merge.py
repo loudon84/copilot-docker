@@ -22,13 +22,13 @@ def test_preserve_model_and_union_plugins(tmp_path: Path):
     }
     patch = {
         "model": {"default": "should-not-overwrite"},
-        "plugins": {"enabled": ["hermes-finance-bi-plugin"]},
-        "agent": {"max_turns": 40},
+        "plugins": {"enabled": ["hermes-sqlbot-adapter"]},
+        "agent": {"max_turns": 24},
     }
     merged = deep_merge(config, patch)
     assert merged["model"]["default"] == "local-model"
-    assert merged["plugins"]["enabled"] == ["existing-plugin", "hermes-finance-bi-plugin"]
-    assert merged["agent"]["max_turns"] == 40
+    assert merged["plugins"]["enabled"] == ["existing-plugin", "hermes-sqlbot-adapter"]
+    assert merged["agent"]["max_turns"] == 24
 
 
 def test_toolsets_union():
@@ -43,8 +43,8 @@ def test_ensure_plugin_enabled_appends_platform_toolsets():
         "plugins": {"enabled": []},
         "platform_toolsets": {"cli": ["file", "skills"]},
     }
-    ensure_plugin_enabled(config, "hermes-finance-bi-plugin", "finance-bi")
-    assert "hermes-finance-bi-plugin" in config["plugins"]["enabled"]
+    ensure_plugin_enabled(config, "hermes-sqlbot-adapter", "finance-bi")
+    assert "hermes-sqlbot-adapter" in config["plugins"]["enabled"]
     assert "finance-bi" in config["platform_toolsets"]["cli"]
 
 
@@ -64,7 +64,7 @@ def test_merge_files_inplace_atomic_and_idempotent(tmp_path: Path):
     patch_path.write_text(
         yaml.safe_dump(
             {
-                "plugins": {"enabled": ["hermes-finance-bi-plugin"]},
+                "plugins": {"enabled": ["hermes-sqlbot-adapter"]},
                 "agent": {"max_turns": 24},
             },
             allow_unicode=True,
@@ -80,10 +80,9 @@ def test_merge_files_inplace_atomic_and_idempotent(tmp_path: Path):
     assert once["model"]["default"] == "local-model"
     assert once["plugins"]["enabled"] == [
         "existing-plugin",
-        "hermes-finance-bi-plugin",
+        "hermes-sqlbot-adapter",
     ]
     assert twice["plugins"]["enabled"] == once["plugins"]["enabled"]
     assert twice["agent"]["max_turns"] == 24
-    # backup created
     backups = list((tmp_path / ".backup").rglob("config.yaml"))
     assert backups

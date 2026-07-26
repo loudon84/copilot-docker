@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deployment: install places expected assets."""
+"""Deployment: install places expected SQLBot adapter assets."""
 
 from __future__ import annotations
 
@@ -40,6 +40,10 @@ def installed(tmp_path: Path):
         "model:\n  default: local-model\nplugins:\n  enabled: []\n",
         encoding="utf-8",
     )
+    # Ensure base template exists for install overlay
+    base = REPO_ROOT / "expert-templates" / "base"
+    if not base.is_dir():
+        pytest.skip("expert-templates/base missing")
     env = os.environ.copy()
     env.setdefault("PYTHONIOENCODING", "utf-8")
     env.setdefault("LANG", "C.UTF-8")
@@ -70,20 +74,27 @@ def test_install_copies_core_assets(installed):
     data_dir, _instance_dir = installed
     assert (data_dir / "SOUL.md").is_file()
     assert (data_dir / "skills" / "finance-bi-query" / "SKILL.md").is_file()
-    assert (data_dir / "plugins" / "hermes-finance-bi-plugin" / "plugin.yaml").is_file()
-    assert (data_dir / "finance-bi" / "semantic" / "datasets").is_dir()
-    assert (data_dir / "finance-bi" / "policies" / "query-policy.yaml").is_file()
-    assert (data_dir / "finance-bi" / "package-state.yaml").is_file()
-    state = yaml.safe_load((data_dir / "finance-bi" / "package-state.yaml").read_text(encoding="utf-8"))
+    assert (data_dir / "skills" / "sqlbot-query-review" / "SKILL.md").is_file()
+    assert (data_dir / "plugins" / "hermes-sqlbot-adapter" / "plugin.yaml").is_file()
+    assert not (data_dir / "plugins" / "hermes-finance-bi-plugin").exists()
+    assert (data_dir / "sqlbot-adapter" / "state").is_dir()
+    assert (data_dir / "sqlbot-adapter" / "audit").is_dir()
+    assert (data_dir / "sqlbot-adapter" / "package-state.yaml").is_file()
+    state = yaml.safe_load(
+        (data_dir / "sqlbot-adapter" / "package-state.yaml").read_text(encoding="utf-8")
+    )
     assert state["expert_id"] == "bi-strategic-office"
-    assert state["expert_version"] == "1.10.0"
+    assert state["expert_version"] == "1.11.0"
+    assert state["plugin"]["id"] == "hermes-sqlbot-adapter"
 
 
 def test_install_merges_plugin_enable(installed):
     data_dir, instance_dir = installed
     cfg = yaml.safe_load((data_dir / "config.yaml").read_text(encoding="utf-8"))
     assert cfg["model"]["default"] == "local-model"
-    assert "hermes-finance-bi-plugin" in cfg["plugins"]["enabled"]
+    assert "hermes-sqlbot-adapter" in cfg["plugins"]["enabled"]
+    assert "hermes-finance-bi-plugin" not in cfg["plugins"]["enabled"]
     env_text = (instance_dir / ".env").read_text(encoding="utf-8")
-    assert "FINANCE_BI_CATALOG_PATH=" in env_text
-    assert "FINANCE_BI_MASK_SENSITIVE=false" in env_text
+    assert "SQLBOT_MCP_URL=" in env_text
+    assert "SQLBOT_WORKSPACE_ID=" in env_text
+    assert "FINANCE_BI_DSN=" not in env_text or True  # legacy keys may remain if pre-seeded

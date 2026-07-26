@@ -1,0 +1,48 @@
+# Golden questions for bi-strategic-office + SQLBot (v1.11)
+
+questions:
+  - id: q_trx_detail
+    text: 查询凭证号101IN26070199的交易明细
+    expect:
+      datasource_hint: finance-ar
+      must_preserve_identifiers: ["101IN26070199"]
+      detail_query: true
+
+  - id: q_product_profit_q2
+    text: 查询2026Q2各产品销售利润
+    expect:
+      datasource_hint: finance-sales-profit
+      time_range: 2026Q2
+
+  - id: q_followup_margin
+    text: 只看毛利率低于5%的产品
+    expect:
+      followup: true
+      inherits_context: true
+
+  - id: q_followup_region
+    text: 按区域拆分上一份结果
+    expect:
+      followup: true
+      inherits_context: true
+
+  - id: q_top_ar_customers
+    text: 查询香港主体前十大应收客户
+    expect:
+      entity_scope: 香港
+
+  - id: q_overdue_ar
+    text: 查询本月逾期应收金额
+    expect:
+      time_range: current_month
+
+  - id: q_yoy_profit
+    text: 对比本季度和上年同期产品利润
+    expect:
+      comparison: yoy
+
+  - id: q_explain_margin
+    text: 解释销售利润的计算口径
+    expect:
+      tool: finance_bi_explain
+      no_requery: true

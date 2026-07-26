@@ -1,6 +1,8 @@
 agent:
-  max_turns: 40
+  max_turns: 24
   gateway_timeout: 600
+  gateway_timeout_warning: 300
+  environment_probe: false
   # BI 专家禁止用 terminal/docker 沙箱跑 SQL；取数只能走 finance-bi 工具
   disabled_toolsets:
     - terminal
@@ -20,10 +22,13 @@ display:
 memory:
   nudge_interval: 0
 
+privacy:
+  redact_pii: true
+
 # Hermes general plugins are opt-in (not loaded until listed here).
 plugins:
   enabled:
-    - hermes-finance-bi-plugin
+    - hermes-sqlbot-adapter
 
 # 明确把 finance-bi 放进白名单；不依赖 terminal
 platform_toolsets:
@@ -37,3 +42,11 @@ platform_toolsets:
     - web
     - memory
     - delegation
+
+toolsets:
+  - file
+  - skills
+  - session_search
+  - todo
+  - delegation
+  - finance-bi

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unit tests for lib/package_state.py."""
+"""Unit tests for lib/package_state.py (v1.11)."""
 
 from __future__ import annotations
 
@@ -21,31 +21,32 @@ from package_state import (  # noqa: E402
 
 
 def test_build_state_fields():
-    state = build_state(expert_version="1.10.0", package_hash="abc")
+    state = build_state(expert_version="1.11.0", package_hash="abc")
     assert state["expert_id"] == "bi-strategic-office"
-    assert state["expert_version"] == "1.10.0"
-    assert state["plugin"]["id"] == "hermes-finance-bi-plugin"
-    assert state["plugin"]["version"] == "1.10.0"
-    assert state["semantic_catalog_version"] == "1.10.0"
+    assert state["expert_version"] == "1.11.0"
+    assert state["plugin"]["id"] == "hermes-sqlbot-adapter"
+    assert state["plugin"]["version"] == "1.11.0"
+    assert state["query_backend"] == "sqlbot-mcp"
     assert state["package_hash"] == "abc"
     assert "installed_at" in state
 
 
 def test_write_and_read_atomic(tmp_path: Path):
-    path = tmp_path / "finance-bi" / "package-state.yaml"
-    state = build_state(expert_version="1.10.0")
+    path = tmp_path / "sqlbot-adapter" / "package-state.yaml"
+    state = build_state(expert_version="1.11.0")
     write_state(path, state)
     loaded = read_state(path)
     assert loaded is not None
-    assert loaded["expert_version"] == "1.10.0"
-    assert loaded["plugin"]["id"] == "hermes-finance-bi-plugin"
+    assert loaded["expert_version"] == "1.11.0"
+    assert loaded["plugin"]["id"] == "hermes-sqlbot-adapter"
 
 
 def test_write_success_state_from_package(tmp_path: Path):
     out = write_success_state(tmp_path, PACKAGE_ROOT)
     assert out.is_file()
+    assert "sqlbot-adapter" in str(out)
     data = yaml.safe_load(out.read_text(encoding="utf-8"))
-    assert data["expert_version"] == "1.10.0"
+    assert data["expert_version"] == "1.11.0"
     assert data["package_hash"]
     assert compute_package_hash(PACKAGE_ROOT) == data["package_hash"]
 

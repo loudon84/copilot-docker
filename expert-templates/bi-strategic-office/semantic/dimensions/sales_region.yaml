@@ -1,9 +1,0 @@
-id: sales_region
-name: 销售区域
-field: sales_region
-type: string
-aliases:
-  - 区域
-  - 销售区
-datasets:
-  - product_profit_daily

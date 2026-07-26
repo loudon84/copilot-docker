@@ -26,7 +26,7 @@ bash scripts/up-instance.sh finance
 bash scripts/create-instance.sh sale 9602 sale
 bash scripts/up-instance.sh sale
 bash scripts/create-instance.sh bi-strategic-office 8790 bi-strategic-office
-# 配置 instances/bi-strategic-office/.env 中只读 FINANCE_BI_DSN 后：
+# 配置 instances/bi-strategic-office/.env 中 SQLBOT_*（见专家包 config/sqlbot.example.env）后：
 bash scripts/sync-runtime-env.sh bi-strategic-office
 bash scripts/up-instance.sh bi-strategic-office
 ```
@@ -88,7 +88,7 @@ bash scripts/restart-instance.sh sale
 | `expert-templates/writer/` | 中文写作与内容生产 | [README](expert-templates/writer/README.md) |
 | `expert-templates/finance/` | 财务运营（账龄、回款、现金流） | [README](expert-templates/finance/README.md) |
 | `expert-templates/sale/` | 企业销售助手 | [README](expert-templates/sale/README.md) |
-| `expert-templates/bi-strategic-office/` | 财务 BI 智能问数 | [README](expert-templates/bi-strategic-office/README.md) |
+| `expert-templates/bi-strategic-office/` | 财务 BI 智能问数（SQLBot MCP Adapter） | [README](expert-templates/bi-strategic-office/README.md) |
 | `expert-templates/ceo-strategic-office/` | CEO 战略办公室专家团队 | [README](expert-templates/ceo-strategic-office/README.md) |
 
 基础设施模板 `base/`、`default/` 供注入脚本内部使用，无独立 README。
@@ -130,7 +130,7 @@ bash scripts/doctor-local-registry.sh
 │   ├── writer/
 │   ├── finance/
 │   ├── sale/
-│   ├── bi-strategic-office/    # 财务 BI 问数（PRD v1.9）
+│   ├── bi-strategic-office/    # 财务 BI 问数（PRD v1.11 / SQLBot）
 │   └── ceo-strategic-office/   # Profile Team（PRD v1.8）
 └── instances/
     ├── writer/
@@ -140,10 +140,10 @@ bash scripts/doctor-local-registry.sh
     │   ├── .env
     │   └── data/hermes/
     ├── bi-strategic-office/
-    │   ├── .env                # 含 FINANCE_BI_*（勿提交真实 DSN）
+    │   ├── .env                # 含 SQLBOT_*（勿提交真实密码）
     │   └── data/hermes/
-    │       ├── finance-bi/     # semantic / policies / state
-    │       └── plugins/hermes-finance-bi-plugin/
+    │       ├── sqlbot-adapter/ # state / audit
+    │       └── plugins/hermes-sqlbot-adapter/
     └── ceo-office/             # 团队实例示例
         ├── .env
         └── data/hermes/

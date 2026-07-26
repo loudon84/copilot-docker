@@ -1,9 +1,0 @@
-terms:
-  - term: 销售利润
-    preferred_metric: gross_profit_amount
-    note: MVP 默认映射为销售毛利；若用户要经营利润需澄清。
-  - term: 利润
-    clarification_required: true
-    candidates:
-      - gross_profit_amount
-    note: 利润存在歧义，需确认是销售毛利还是经营利润。

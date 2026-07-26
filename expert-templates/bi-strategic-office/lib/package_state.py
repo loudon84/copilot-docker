@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Manage finance-bi/package-state.yaml for the expert package."""
+"""Manage sqlbot-adapter/package-state.yaml for the expert package."""
 
 from __future__ import annotations
 
@@ -17,7 +17,8 @@ except ImportError:
     print("ERROR: PyYAML is required", file=sys.stderr)
     sys.exit(2)
 
-DEFAULT_STATE_REL = Path("finance-bi") / "package-state.yaml"
+DEFAULT_STATE_REL = Path("sqlbot-adapter") / "package-state.yaml"
+LEGACY_STATE_REL = Path("finance-bi") / "package-state.yaml"
 
 
 def _atomic_write(path: Path, text: str) -> None:
@@ -38,13 +39,12 @@ def _atomic_write(path: Path, text: str) -> None:
 
 
 def compute_package_hash(package_root: Path) -> str:
-    """Stable content hash over VERSION + expert.yaml + plugin.yaml + requirements."""
     parts: list[bytes] = []
     for rel in (
         "VERSION",
         "expert.yaml",
-        "plugins/hermes-finance-bi-plugin/plugin.yaml",
-        "plugins/hermes-finance-bi-plugin/requirements.txt",
+        "plugins/hermes-sqlbot-adapter/plugin.yaml",
+        "plugins/hermes-sqlbot-adapter/requirements.txt",
     ):
         p = package_root / rel
         if p.is_file():
@@ -60,10 +60,9 @@ def compute_package_hash(package_root: Path) -> str:
 def build_state(
     *,
     expert_id: str = "bi-strategic-office",
-    expert_version: str = "1.10.0",
-    plugin_id: str = "hermes-finance-bi-plugin",
+    expert_version: str = "1.11.0",
+    plugin_id: str = "hermes-sqlbot-adapter",
     plugin_version: str | None = None,
-    semantic_catalog_version: str | None = None,
     package_source: str = "expert-templates/bi-strategic-office",
     package_hash: str = "",
     installed_at: str | None = None,
@@ -76,7 +75,7 @@ def build_state(
             "id": plugin_id,
             "version": plugin_version or version,
         },
-        "semantic_catalog_version": semantic_catalog_version or version,
+        "query_backend": "sqlbot-mcp",
         "installed_at": installed_at
         or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "package_source": package_source,
@@ -94,11 +93,10 @@ def read_state(path: Path) -> dict[str, Any] | None:
 
 
 def write_state(path: Path, state: dict[str, Any]) -> None:
-    # Never write secrets
     text = yaml.safe_dump(state, allow_unicode=True, sort_keys=False)
     if any(
         k in text.lower()
-        for k in ("password", "secret", "api_key", "dsn=", "passwd")
+        for k in ("password", "secret", "api_key", "dsn=", "passwd", "access_token")
     ):
         raise ValueError("refusing to write package-state containing secret-like keys")
     _atomic_write(path, text)
@@ -114,9 +112,9 @@ def write_success_state(
     version = expert_version or (
         version_file.read_text(encoding="utf-8").strip()
         if version_file.is_file()
-        else "1.10.0"
+        else "1.11.0"
     )
-    plugin_yaml = package_root / "plugins" / "hermes-finance-bi-plugin" / "plugin.yaml"
+    plugin_yaml = package_root / "plugins" / "hermes-sqlbot-adapter" / "plugin.yaml"
     plugin_version = version
     if plugin_yaml.is_file():
         pdata = yaml.safe_load(plugin_yaml.read_text(encoding="utf-8")) or {}
@@ -126,7 +124,6 @@ def write_success_state(
     state = build_state(
         expert_version=version,
         plugin_version=plugin_version,
-        semantic_catalog_version=version,
         package_hash=compute_package_hash(package_root),
     )
     out = data_dir / DEFAULT_STATE_REL
@@ -157,8 +154,11 @@ def main() -> int:
             print(f"Wrote {path}")
             return 0
         if args.cmd == "read":
-            path = Path(args.data_dir) / DEFAULT_STATE_REL
+            data_dir = Path(args.data_dir)
+            path = data_dir / DEFAULT_STATE_REL
             state = read_state(path)
+            if state is None:
+                state = read_state(data_dir / LEGACY_STATE_REL)
             if state is None:
                 print("NO_STATE")
                 return 1

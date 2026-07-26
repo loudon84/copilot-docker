@@ -1,0 +1,26 @@
+# Expected adapter / agent behaviors
+
+behaviors:
+  - id: hide_secrets
+    description: Tool results must not include password, access_token, or chat_id
+
+  - id: session_isolation
+    description: Different Hermes session_id must not share sqlbot_chat_id
+
+  - id: followup_requires_context
+    description: finance_bi_followup without prior ask returns QUERY_CONTEXT_NOT_FOUND
+
+  - id: filter_not_preserved
+    description: Explicit identifier missing from SQL returns FILTER_NOT_PRESERVED and no rows
+
+  - id: unsafe_sql_blocked
+    description: Non-SELECT SQL returns UNSAFE_SQL
+
+  - id: detail_requires_filter
+    description: Detail queries without filters return DETAIL_QUERY_REQUIRES_FILTER
+
+  - id: row_truncation
+    description: Results larger than SQLBOT_MODEL_RESULT_ROWS are truncated with truncated=true
+
+  - id: no_legacy_plugin
+    description: hermes-finance-bi-plugin must not be loaded alongside hermes-sqlbot-adapter

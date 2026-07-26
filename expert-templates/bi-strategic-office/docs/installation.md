@@ -1,65 +1,72 @@
-# 安装指南
+# 安装说明（v1.11）
 
 ## 前置条件
 
-- 已构建 Hermes 镜像：`bash scripts/build-image.sh`
-- 本机可用 `python3` + PyYAML
-- Git Bash / Linux bash（Windows 推荐 Git Bash）
+1. 已部署并可访问的 SQLBot 服务（含 MCP 端点）
+2. SQLBot 中已配置财务工作空间、只读数据源、表字段/关系/术语/SQL 示例
+3. 已准备 Hermes 专用 SQLBot 服务账号（固定工作空间）
+4. Docker 与本仓库 `scripts/create-instance.sh` / `up-instance.sh` 可用
 
-## 校验专家包
+## 步骤
+
+### 1. 校验专家包
 
 ```bash
 bash expert-templates/bi-strategic-office/bin/validate.sh
 bash expert-templates/bi-strategic-office/bin/doctor.sh --package-only
 ```
 
-## 创建实例（新包流程）
+### 2. 创建实例
 
 ```bash
 bash scripts/create-instance.sh bi-strategic-office 8790 bi-strategic-office
 ```
 
-`create-instance.sh` 检测到 `expert.yaml` + `bin/install.sh` 后，调用专家包安装器，不再走公共 BI 专属分支。
+### 3. 填写 SQLBot 环境变量
 
-## 配置只读库
+编辑 `instances/bi-strategic-office/.env`，参考：
 
-编辑 `instances/<profile>/.env`（勿提交真实密码）：
-
-```env
-FINANCE_BI_DSN=mssql+pymssql://readonly_user:PASSWORD@db-host:1433/bi_db
-FINANCE_BI_DIALECT=mssql
-FINANCE_BI_CHARSET=cp936
+```text
+expert-templates/bi-strategic-office/config/sqlbot.example.env
 ```
 
-## 启动
+必填：
+
+- `SQLBOT_MCP_URL`
+- `SQLBOT_USERNAME`
+- `SQLBOT_PASSWORD`
+- `SQLBOT_WORKSPACE_ID`
+- `SQLBOT_DEFAULT_DATASOURCE_ID`
+
+### 4. 同步并启动
 
 ```bash
+bash scripts/sync-runtime-env.sh bi-strategic-office
 bash scripts/up-instance.sh bi-strategic-office
 ```
 
-启动后自动执行 `bin/post-start.sh`：安装插件 Python 依赖、校验 Toolset、运行 doctor。
+`post-start.sh` 会安装 Adapter 依赖、启用插件，并对 SQLBot MCP 做连通性探测。SQLBot 不可用时返回非零，但**容器保持运行**，不会回退旧自研插件。
 
-## 手工安装 / 更新
-
-```bash
-bash expert-templates/bi-strategic-office/bin/install.sh \
-  --profile bi-strategic-office \
-  --instance-dir instances/bi-strategic-office \
-  --data-dir instances/bi-strategic-office/data/hermes \
-  --repo-root .
-
-bash expert-templates/bi-strategic-office/bin/update.sh \
-  --profile bi-strategic-office \
-  --instance-dir instances/bi-strategic-office \
-  --data-dir instances/bi-strategic-office/data/hermes \
-  --repo-root .
-```
-
-## 诊断
+### 5. 验证
 
 ```bash
-bash expert-templates/bi-strategic-office/bin/doctor.sh \
-  --profile bi-strategic-office \
-  --data-dir instances/bi-strategic-office/data/hermes \
-  --container hermes-bi-strategic-office
+docker exec hermes-bi-strategic-office hermes plugins list
+docker exec hermes-bi-strategic-office hermes tools --summary
 ```
+
+预期出现：
+
+- `hermes-sqlbot-adapter`
+- `Finance-Bi` / `finance-bi`
+
+不应出现：
+
+- `hermes-finance-bi-plugin`
+
+### 6. 记录 SQLBot 实施结果
+
+按 [sqlbot-example.md](sqlbot-example.md) 填写工作空间、数据源、表字段、术语与验收问题。
+
+## 从 v1.10 升级
+
+见 [upgrade.md](upgrade.md)。

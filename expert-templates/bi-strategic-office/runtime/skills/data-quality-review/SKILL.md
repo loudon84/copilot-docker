@@ -1,7 +1,7 @@
 ---
 name: data-quality-review
 description: 查询结果数据质量与口径一致性检查。
-version: 1.0.0
+version: 1.1.0
 metadata:
   hermes:
     tags: [bi, quality]
@@ -10,4 +10,6 @@ metadata:
 
 # data-quality-review
 
-正式输出前调用 finance_bi_validate_result，检查主体、时间、币种、聚合粒度与警告。
+正式输出前复核主体、时间、币种、聚合粒度与 `warnings`。
+
+优先结合 `sqlbot-query-review` 与 `finance_bi_explain`。若 Adapter 返回安全错误或截断警告，必须在结论中显式说明。
