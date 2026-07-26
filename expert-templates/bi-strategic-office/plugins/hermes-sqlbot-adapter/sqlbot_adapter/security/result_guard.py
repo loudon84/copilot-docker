@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from typing import Any, Dict, List, Sequence, Tuple
 
-from sqlbot_adapter.contracts import ErrorCode, SqlbotAdapterError
+from sqlbot_adapter.errors import ErrorCode, SqlbotAdapterError
 from sqlbot_adapter.security.query_guard import ExplicitIdentifier, extract_explicit_identifiers
 
 DETAIL_HINTS = re.compile(
@@ -62,12 +62,16 @@ def truncate_rows(
     model_limit: int = 100,
     hard_limit: int = 500,
 ) -> Tuple[List[Any], bool, int]:
-    """Return (rows_for_model, truncated, original_count)."""
+    """Return (rows_for_model, truncated, original_count). Raises RESULT_TOO_LARGE if over hard_limit."""
     original = len(rows or [])
+    if original > max(int(hard_limit), 1):
+        raise SqlbotAdapterError(
+            ErrorCode.RESULT_TOO_LARGE,
+            f"返回数据超过硬上限 {hard_limit} 行（实际 {original}）。",
+            source="adapter",
+            retryable=False,
+        )
     limit = min(max(int(model_limit), 1), max(int(hard_limit), 1))
-    if original > hard_limit:
-        # Cap at hard limit for any in-memory processing before model slice
-        rows = rows[:hard_limit]
     truncated = original > limit
     return list(rows[:limit]), truncated, original
 
@@ -89,8 +93,6 @@ def apply_result_guards(
         warnings.append(
             f"结果已截断：原始 {original} 行，返回模型 {len(sliced)} 行（上限 {model_limit}）。"
         )
-    if original > hard_limit:
-        warnings.append(f"原始结果超过硬上限 {hard_limit}，已丢弃超出部分。")
     return sliced, truncated, original, warnings
 
 

@@ -243,6 +243,9 @@ if [[ -f "$INSTANCE_ENV" ]]; then
   ensure_env "SQLBOT_PASSWORD" ""
   ensure_env "SQLBOT_WORKSPACE_ID" ""
   ensure_env "SQLBOT_DEFAULT_DATASOURCE_ID" ""
+  ensure_env "SQLBOT_SESSION_ENCRYPTION_KEY" ""
+  ensure_env "SQLBOT_CONNECT_TIMEOUT_SECONDS" "15"
+  ensure_env "SQLBOT_LOGIN_TIMEOUT_SECONDS" "30"
   ensure_env "SQLBOT_REQUEST_TIMEOUT_SECONDS" "120"
   ensure_env "SQLBOT_SESSION_TTL_SECONDS" "86400"
   ensure_env "SQLBOT_VERIFY_SSL" "true"
@@ -255,6 +258,13 @@ if [[ -f "$INSTANCE_ENV" ]]; then
 else
   echo "WARN: instance .env missing at $INSTANCE_ENV — skipped SQLBOT_* placeholders"
 fi
+
+# Initialize SQLite schema (idempotent; does not connect to SQLBot)
+echo "[install] init sqlbot-adapter state schema"
+mkdir -p "$DATA_DIR/sqlbot-adapter/state" "$DATA_DIR/sqlbot-adapter/audit"
+"$PYTHON_BIN" "$PACKAGE_ROOT/plugins/hermes-sqlbot-adapter/scripts/init_state.py" \
+  --data-dir "$DATA_DIR" \
+  || step_fail "init_state.py"
 
 if [[ -f "$REPO_ROOT/scripts/sync-runtime-env.sh" ]]; then
   bash "$REPO_ROOT/scripts/sync-runtime-env.sh" "$PROFILE" 2>/dev/null || true

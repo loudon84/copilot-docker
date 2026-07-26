@@ -60,24 +60,29 @@ def compute_package_hash(package_root: Path) -> str:
 def build_state(
     *,
     expert_id: str = "bi-strategic-office",
-    expert_version: str = "1.11.0",
+    expert_version: str = "1.11.1",
     plugin_id: str = "hermes-sqlbot-adapter",
     plugin_version: str | None = None,
     package_source: str = "expert-templates/bi-strategic-office",
     package_hash: str = "",
     installed_at: str | None = None,
+    schema_version: int = 2,
 ) -> dict[str, Any]:
     version = expert_version
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     return {
         "expert_id": expert_id,
         "expert_version": version,
+        "plugin_id": plugin_id,
+        "plugin_version": plugin_version or version,
         "plugin": {
             "id": plugin_id,
             "version": plugin_version or version,
         },
-        "query_backend": "sqlbot-mcp",
-        "installed_at": installed_at
-        or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "query_backend": "sqlbot-mcp-sse",
+        "schema_version": schema_version,
+        "installed_at": installed_at or now,
+        "updated_at": now,
         "package_source": package_source,
         "package_hash": package_hash,
     }
@@ -112,7 +117,7 @@ def write_success_state(
     version = expert_version or (
         version_file.read_text(encoding="utf-8").strip()
         if version_file.is_file()
-        else "1.11.0"
+        else "1.11.1"
     )
     plugin_yaml = package_root / "plugins" / "hermes-sqlbot-adapter" / "plugin.yaml"
     plugin_version = version

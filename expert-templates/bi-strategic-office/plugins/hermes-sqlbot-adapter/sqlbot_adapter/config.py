@@ -1,4 +1,4 @@
-"""Adapter configuration from SQLBOT_* environment variables."""
+"""Adapter configuration from SQLBOT_* environment variables (v1.11.1)."""
 
 from __future__ import annotations
 
@@ -15,6 +15,9 @@ class AdapterConfig:
     password: str = ""
     workspace_id: str = ""
     default_datasource_id: str = ""
+    session_encryption_key: str = ""
+    connect_timeout_seconds: int = 15
+    login_timeout_seconds: int = 30
     request_timeout_seconds: int = 120
     session_ttl_seconds: int = 86400
     verify_ssl: bool = True
@@ -27,13 +30,7 @@ class AdapterConfig:
     datasource_aliases: Dict[str, str] = field(default_factory=dict)
 
     def is_configured(self) -> bool:
-        return bool(
-            self.mcp_url
-            and self.username
-            and self.password
-            and self.workspace_id
-            and self.default_datasource_id
-        )
+        return not bool(self.missing_required())
 
     def missing_required(self) -> list[str]:
         required = {
@@ -42,6 +39,7 @@ class AdapterConfig:
             "SQLBOT_PASSWORD": self.password,
             "SQLBOT_WORKSPACE_ID": self.workspace_id,
             "SQLBOT_DEFAULT_DATASOURCE_ID": self.default_datasource_id,
+            "SQLBOT_SESSION_ENCRYPTION_KEY": self.session_encryption_key,
         }
         return [k for k, v in required.items() if not v]
 
@@ -51,20 +49,18 @@ class AdapterConfig:
             return self.default_datasource_id
         if key in self.datasource_aliases:
             return self.datasource_aliases[key]
-        # Allow passing the raw default id; otherwise fall back to default.
         if key == self.default_datasource_id:
             return key
         return self.default_datasource_id
 
 
-def _as_bool(value: str, default: bool = True) -> bool:
+def _as_bool(value: str | None, default: bool = True) -> bool:
     if value is None or value == "":
         return default
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _parse_aliases(raw: str) -> Dict[str, str]:
-    """Parse SQLBOT_DATASOURCE_ALIASES like key1:id1,key2:id2."""
     out: Dict[str, str] = {}
     for part in (raw or "").split(","):
         part = part.strip()
@@ -87,6 +83,9 @@ def load_config(environ: dict | None = None) -> AdapterConfig:
         password=env.get("SQLBOT_PASSWORD") or "",
         workspace_id=(env.get("SQLBOT_WORKSPACE_ID") or "").strip(),
         default_datasource_id=(env.get("SQLBOT_DEFAULT_DATASOURCE_ID") or "").strip(),
+        session_encryption_key=(env.get("SQLBOT_SESSION_ENCRYPTION_KEY") or "").strip(),
+        connect_timeout_seconds=int(env.get("SQLBOT_CONNECT_TIMEOUT_SECONDS") or 15),
+        login_timeout_seconds=int(env.get("SQLBOT_LOGIN_TIMEOUT_SECONDS") or 30),
         request_timeout_seconds=int(env.get("SQLBOT_REQUEST_TIMEOUT_SECONDS") or 120),
         session_ttl_seconds=int(env.get("SQLBOT_SESSION_TTL_SECONDS") or 86400),
         verify_ssl=_as_bool(env.get("SQLBOT_VERIFY_SSL", "true"), True),

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Update installed bi-strategic-office package assets (PRD v1.11).
+# Update installed bi-strategic-office package assets (PRD v1.11.1 hotfix).
 set -euo pipefail
 
 PACKAGE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -30,6 +30,9 @@ done
 
 PYTHON_BIN="$(command -v python3 || command -v python || true)"
 NEW_VERSION="$(tr -d ' \n\r' < "$PACKAGE_ROOT/VERSION")"
+TS="$(date +%Y%m%d-%H%M%S)"
+BACKUP_DIR="$DATA_DIR/.backup/update-$TS"
+mkdir -p "$BACKUP_DIR"
 
 echo "[update] package version=$NEW_VERSION"
 if [[ -n "$PYTHON_BIN" ]]; then
@@ -38,12 +41,40 @@ if [[ -n "$PYTHON_BIN" ]]; then
   echo "$OLD" | sed 's/^/  /' || true
 fi
 
+# Backup plugin + SQLite before overwrite (rollback hint on failure)
+echo "[update] backup → $BACKUP_DIR"
+if [[ -d "$DATA_DIR/plugins/hermes-sqlbot-adapter" ]]; then
+  mkdir -p "$BACKUP_DIR/plugins"
+  cp -a "$DATA_DIR/plugins/hermes-sqlbot-adapter" "$BACKUP_DIR/plugins/" 2>/dev/null || true
+fi
+if [[ -f "$DATA_DIR/sqlbot-adapter/state/sqlbot_sessions.db" ]]; then
+  mkdir -p "$BACKUP_DIR/sqlbot-adapter/state"
+  cp -a "$DATA_DIR/sqlbot-adapter/state/sqlbot_sessions.db"* "$BACKUP_DIR/sqlbot-adapter/state/" 2>/dev/null || true
+fi
+if [[ -f "$DATA_DIR/sqlbot-adapter/package-state.yaml" ]]; then
+  mkdir -p "$BACKUP_DIR/sqlbot-adapter"
+  cp -a "$DATA_DIR/sqlbot-adapter/package-state.yaml" "$BACKUP_DIR/sqlbot-adapter/" 2>/dev/null || true
+fi
+
+rollback() {
+  echo "ERROR: update failed — restoring plugin from $BACKUP_DIR" >&2
+  if [[ -d "$BACKUP_DIR/plugins/hermes-sqlbot-adapter" ]]; then
+    rm -rf "$DATA_DIR/plugins/hermes-sqlbot-adapter"
+    cp -a "$BACKUP_DIR/plugins/hermes-sqlbot-adapter" "$DATA_DIR/plugins/" || true
+  fi
+  echo "Hint: SQLite backup at $BACKUP_DIR/sqlbot-adapter/state (sessions preserved if restore needed)" >&2
+  exit 1
+}
+
 bash "$PACKAGE_ROOT/bin/install.sh" \
   --profile "$PROFILE" \
   --instance-dir "$INSTANCE_DIR" \
   --data-dir "$DATA_DIR" \
-  --repo-root "$REPO_ROOT"
+  --repo-root "$REPO_ROOT" \
+  || rollback
 
-echo "OK: update complete"
+# Schema migration is idempotent via init_state (called by install.sh)
+echo "OK: update complete (schema_version=2, sessions preserved)"
 echo "Next: bash scripts/up-instance.sh $PROFILE  # to run post-start / refresh deps"
+echo "Rollback: restore plugin from $BACKUP_DIR/plugins/hermes-sqlbot-adapter if needed"
 exit 0

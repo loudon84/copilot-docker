@@ -1,5 +1,25 @@
 # 升级说明
 
+## v1.11.0 → v1.11.1（SSE Client Hotfix）
+
+### 变更摘要
+
+- MCP 改为官方 SSE Client（`mcp==1.26.0`）
+- 新增必填 `SQLBOT_SESSION_ENCRYPTION_KEY`（Fernet；禁止明文 Token）
+- Session schema v2；`package-state.yaml` 记录 `schema_version: 2`
+- Doctor 默认 initialize/ping；`--deep` 才 `mcp_start`
+
+### 升级步骤
+
+1. 在实例 `.env` 增加 `SQLBOT_SESSION_ENCRYPTION_KEY`
+2. 执行 `bin/update.sh`（会备份 plugin + SQLite）
+3. `bash scripts/up-instance.sh <profile>`（刷新依赖并 post-start）
+4. `bash bin/doctor.sh --profile <profile>`；可选 `--deep`
+
+失败时从 `data/hermes/.backup/update-*` 回滚插件。
+
+---
+
 ## v1.10 → v1.11（SQLBot Adapter）
 
 ### 变更摘要

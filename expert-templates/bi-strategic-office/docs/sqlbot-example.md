@@ -9,6 +9,7 @@
 - 工作空间名称：
 - 工作空间 ID：
 - MCP 地址：
+- 加密密钥已配置（`SQLBOT_SESSION_ENCRYPTION_KEY`，勿写入本文件）：□ 是
 - 配置日期：
 - 配置负责人：
 

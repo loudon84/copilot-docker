@@ -3,7 +3,7 @@ schema_version: 1
 expert:
   id: bi-strategic-office
   name: 财务经营分析办公室
-  version: 1.11.0
+  version: 1.11.1
   type: expert
   description: 财务分析、SQLBot 智能问数和经营分析专家
 
@@ -45,6 +45,7 @@ required_env:
   - SQLBOT_PASSWORD
   - SQLBOT_WORKSPACE_ID
   - SQLBOT_DEFAULT_DATASOURCE_ID
+  - SQLBOT_SESSION_ENCRYPTION_KEY
 
 security:
   allow_raw_sql: false

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unit tests for result_guard."""
+"""Unit tests for result_guard (v1.11.1)."""
 
 from __future__ import annotations
 
@@ -21,6 +21,13 @@ def test_truncate_rows():
     assert original == 250
     assert truncated is True
     assert len(sliced) == 100
+
+
+def test_hard_limit_result_too_large():
+    rows = [{"i": i} for i in range(501)]
+    with pytest.raises(SqlbotAdapterError) as ei:
+        truncate_rows(rows, model_limit=100, hard_limit=500)
+    assert ei.value.code == ErrorCode.RESULT_TOO_LARGE
 
 
 def test_detail_requires_filter():

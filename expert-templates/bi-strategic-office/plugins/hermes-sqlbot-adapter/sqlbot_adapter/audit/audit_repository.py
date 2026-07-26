@@ -7,6 +7,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict
 
+from sqlbot_adapter.errors import scrub_secrets
+
 
 class AuditRepository:
     def __init__(self, audit_dir: str, enabled: bool = True):
@@ -18,12 +20,12 @@ class AuditRepository:
     def record(self, event: Dict[str, Any]) -> None:
         if not self.enabled:
             return
-        safe = dict(event)
-        for key in ("password", "access_token", "token", "authorization"):
-            safe.pop(key, None)
-        # Never persist full rows
+        safe = scrub_secrets(dict(event))
         if "rows" in safe:
-            safe["rows"] = f"<{len(safe['rows']) if isinstance(safe['rows'], list) else '?'} rows omitted>"
+            safe["rows"] = f"<{len(event['rows']) if isinstance(event.get('rows'), list) else '?'} rows omitted>"
+        # traceback allowed in audit only (not tool result)
+        if event.get("traceback"):
+            safe["traceback"] = str(event["traceback"])[:4000]
         day = datetime.now(timezone.utc).strftime("%Y%m%d")
         path = self.audit_dir / f"audit-{day}.jsonl"
         line = json.dumps(

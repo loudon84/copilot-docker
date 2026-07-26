@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.11.1
+
+- Hotfix：MCP Client 改为官方 `mcp==1.26.0` SSE + `ClientSession`（废弃 httpx JSON-RPC 伪实现）
+- 固定工具名 `mcp_start` / `mcp_question` / `mcp_ws_list` / `mcp_datasource_list`；业务路径不依赖 `list_tools()`
+- 新增 `AsyncBridge`、`result_parser`、错误码 `SQLBOT_DATASOURCE_SESSION_ERROR`（含 `DetachedInstanceError`）
+- Session Store schema v2：Fernet 加密 Token（必填 `SQLBOT_SESSION_ENCRYPTION_KEY`，禁止明文回退）
+- 运行时上下文自 Hermes 注入；模型不可传 session/user/token/chat_id
+- Result Guard：超过硬上限 500 行返回 `RESULT_TOO_LARGE`
+- `install.sh` 幂等建目录并执行 `init_state.py`；Doctor 默认 initialize/ping，`--deep` 才登录
+- 删除重复 `memories/test_sqlbot.py`；正式入口为插件 `scripts/direct_flow_test.py`
+
 ## 1.11.0
 
 - 以 `hermes-sqlbot-adapter` 替换自研 `hermes-finance-bi-plugin`

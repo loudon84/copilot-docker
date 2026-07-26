@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unit tests for error mapping / json helpers."""
+"""Unit tests for error mapping / json helpers (v1.11.1)."""
 
 from __future__ import annotations
 
@@ -13,6 +13,7 @@ sys.path.insert(0, str(PLUGIN))
 from sqlbot_adapter.contracts import (
     ErrorCode,
     SqlbotAdapterError,
+    classify_sqlbot_failure,
     json_err,
     json_ok,
     map_http_error,
@@ -23,6 +24,20 @@ from sqlbot_adapter.contracts import (
 def test_map_http_error():
     assert map_http_error(401).code == ErrorCode.SQLBOT_AUTH_FAILED
     assert map_http_error(503).code == ErrorCode.SQLBOT_UNAVAILABLE
+
+
+def test_detached_instance_error_mapping():
+    err = classify_sqlbot_failure(
+        message="execute sql failed",
+        traceback_text="sqlalchemy.orm.exc.DetachedInstanceError: Instance is not bound",
+        err_type="exec-sql-err",
+    )
+    assert err.code == ErrorCode.SQLBOT_DATASOURCE_SESSION_ERROR
+    assert err.source == "sqlbot"
+    assert err.retryable is False
+    payload = json.loads(json_err(err))
+    assert "DetachedInstanceError" not in json.dumps(payload)
+    assert "traceback" not in json.dumps(payload).lower()
 
 
 def test_json_err_and_scrub():

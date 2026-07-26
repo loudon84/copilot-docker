@@ -20,7 +20,7 @@ bi-strategic-office
 
 ```text
 expert-templates/bi-strategic-office/
-├── expert.yaml          # 包清单（1.11.0）
+├── expert.yaml          # 包清单（1.11.1）
 ├── VERSION
 ├── runtime/             # SOUL / skills / config.patch
 ├── plugins/             # hermes-sqlbot-adapter

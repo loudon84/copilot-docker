@@ -50,26 +50,26 @@ def test_filter_loss_blocks_rows():
 
 
 def test_sessions_isolated(tmp_path: Path):
-    store = SessionStore(str(tmp_path / "s.db"), key_material="k")
+    store = SessionStore(str(tmp_path / "s.db"), encryption_key="k")
     store.upsert(
-        hermes_profile="p",
+        profile_name="p",
         hermes_session_id="s1",
         hermes_user_id="u1",
         sqlbot_chat_id="chat-s1",
         access_token="tok1",
     )
     store.upsert(
-        hermes_profile="p",
+        profile_name="p",
         hermes_session_id="s2",
         hermes_user_id="u1",
         sqlbot_chat_id="chat-s2",
         access_token="tok2",
     )
-    a = store.get(hermes_profile="p", hermes_session_id="s1", hermes_user_id="u1")
-    b = store.get(hermes_profile="p", hermes_session_id="s2", hermes_user_id="u1")
+    a = store.get(profile_name="p", hermes_session_id="s1", hermes_user_id="u1")
+    b = store.get(profile_name="p", hermes_session_id="s2", hermes_user_id="u1")
     assert a and b
     assert a.sqlbot_chat_id != b.sqlbot_chat_id
-    assert a.access_token("k") != b.access_token("k")
+    assert store.access_token(a) != store.access_token(b)
 
 
 def test_scrub_nested_secrets():
@@ -77,3 +77,9 @@ def test_scrub_nested_secrets():
     assert "token" not in cleaned["meta"]
     assert cleaned["meta"]["ok"] == 1
     assert "authorization" not in cleaned
+
+
+def test_encryption_key_required(tmp_path: Path):
+    with pytest.raises(SqlbotAdapterError) as ei:
+        SessionStore(str(tmp_path / "x.db"), encryption_key="  ")
+    assert ei.value.code == ErrorCode.SQLBOT_NOT_CONFIGURED

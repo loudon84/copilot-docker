@@ -84,8 +84,10 @@ def test_install_copies_core_assets(installed):
         (data_dir / "sqlbot-adapter" / "package-state.yaml").read_text(encoding="utf-8")
     )
     assert state["expert_id"] == "bi-strategic-office"
-    assert state["expert_version"] == "1.11.0"
+    assert state["expert_version"] == "1.11.1"
+    assert state.get("schema_version") == 2
     assert state["plugin"]["id"] == "hermes-sqlbot-adapter"
+    assert (data_dir / "sqlbot-adapter" / "state" / "sqlbot_sessions.db").is_file()
 
 
 def test_install_merges_plugin_enable(installed):
@@ -97,4 +99,5 @@ def test_install_merges_plugin_enable(installed):
     env_text = (instance_dir / ".env").read_text(encoding="utf-8")
     assert "SQLBOT_MCP_URL=" in env_text
     assert "SQLBOT_WORKSPACE_ID=" in env_text
+    assert "SQLBOT_SESSION_ENCRYPTION_KEY=" in env_text
     assert "FINANCE_BI_DSN=" not in env_text or True  # legacy keys may remain if pre-seeded

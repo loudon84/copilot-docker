@@ -6,7 +6,7 @@ import re
 from dataclasses import dataclass
 from typing import List
 
-from sqlbot_adapter.contracts import ErrorCode, SqlbotAdapterError
+from sqlbot_adapter.errors import ErrorCode, SqlbotAdapterError
 
 FORBIDDEN_KEYWORDS = (
     "INSERT",

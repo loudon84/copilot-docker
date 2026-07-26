@@ -1,8 +1,15 @@
 name: hermes-sqlbot-adapter
-version: "1.11.0"
-description: SQLBot MCP adapter for Hermes finance-bi toolset (thin adapter, no raw SQL tools)
+version: "1.11.1"
+description: SQLBot MCP SSE adapter for Hermes finance-bi toolset
 provides_tools:
   - finance_bi_ask
   - finance_bi_followup
   - finance_bi_explain
   - finance_bi_reset
+requires_env:
+  - SQLBOT_MCP_URL
+  - SQLBOT_USERNAME
+  - SQLBOT_PASSWORD
+  - SQLBOT_WORKSPACE_ID
+  - SQLBOT_DEFAULT_DATASOURCE_ID
+  - SQLBOT_SESSION_ENCRYPTION_KEY

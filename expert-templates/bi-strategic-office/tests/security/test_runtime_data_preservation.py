@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Security: install must preserve runtime user data (v1.11)."""
+"""Security: install must preserve runtime user data (v1.11.1)."""
 
 from __future__ import annotations
 
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -12,6 +13,7 @@ import yaml
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[2]
 REPO_ROOT = PACKAGE_ROOT.parents[1]
+PLUGIN = PACKAGE_ROOT / "plugins" / "hermes-sqlbot-adapter"
 BASH = None
 for candidate in (
     Path(r"C:\Program Files\Git\bin\bash.exe"),
@@ -21,6 +23,20 @@ for candidate in (
     if candidate.is_file():
         BASH = str(candidate)
         break
+
+
+def _seed_session_db(db_path: Path) -> None:
+    sys.path.insert(0, str(PLUGIN))
+    from sqlbot_adapter.session.session_store import SessionStore
+
+    store = SessionStore(str(db_path), encryption_key="preserve-test-key", ttl_seconds=86400)
+    store.upsert(
+        profile_name="p",
+        hermes_session_id="keep-session",
+        hermes_user_id="u",
+        sqlbot_chat_id="chat-keep",
+        access_token="tok-keep",
+    )
 
 
 def _run_install(tmp_path: Path) -> Path:
@@ -44,7 +60,7 @@ def _run_install(tmp_path: Path) -> Path:
     (data_dir / "workspace" / "exports" / "bi").mkdir(parents=True)
     (data_dir / "workspace" / "exports" / "bi" / "report.xlsx").write_bytes(b"export")
     (data_dir / "sqlbot-adapter" / "state").mkdir(parents=True)
-    (data_dir / "sqlbot-adapter" / "state" / "sqlbot_sessions.db").write_bytes(b"sqlite-fake")
+    _seed_session_db(data_dir / "sqlbot-adapter" / "state" / "sqlbot_sessions.db")
     (data_dir / "memories").mkdir(parents=True)
     (data_dir / "memories" / "MEMORY.md").write_text("# user memory keep\n", encoding="utf-8")
     (data_dir / "config.yaml").write_text(
@@ -93,8 +109,19 @@ def test_runtime_data_preserved(tmp_path: Path):
     assert (data_dir / "sessions" / "test.json").is_file()
     assert (data_dir / "workspace" / "uploads" / "test.xlsx").is_file()
     assert (data_dir / "workspace" / "exports" / "bi" / "report.xlsx").is_file()
-    assert (data_dir / "sqlbot-adapter" / "state" / "sqlbot_sessions.db").read_bytes() == b"sqlite-fake"
     assert "user memory keep" in (data_dir / "memories" / "MEMORY.md").read_text(encoding="utf-8")
+
+    # Existing session mapping must survive install + init_state
+    sys.path.insert(0, str(PLUGIN))
+    from sqlbot_adapter.session.session_store import SessionStore
+
+    store = SessionStore(
+        str(data_dir / "sqlbot-adapter" / "state" / "sqlbot_sessions.db"),
+        encryption_key="preserve-test-key",
+    )
+    rec = store.get(profile_name="p", hermes_session_id="keep-session", hermes_user_id="u")
+    assert rec is not None
+    assert rec.sqlbot_chat_id == "chat-keep"
 
     cfg = yaml.safe_load((data_dir / "config.yaml").read_text(encoding="utf-8"))
     assert cfg["model"]["default"] == "local-model"

@@ -1,4 +1,4 @@
-"""Ask handler module (re-export for package layout clarity)."""
+"""Ask handler module."""
 
 from sqlbot_adapter.handlers.tools import finance_bi_ask
 

@@ -3,7 +3,7 @@ ASK = {
     "description": (
         "发起新的财务 BI 问数。通过 SQLBot Adapter 查询只读数据源。"
         "返回标准化表格：success/query_id/columns/rows。"
-        "不得自行生成或执行 SQL；不得传递 SQLBot 内部 ID。"
+        "不得自行生成或执行 SQL；不得传递 SQLBot 内部 ID / Token / chat_id。"
     ),
     "parameters": {
         "type": "object",
@@ -23,16 +23,6 @@ ASK = {
                 "default": "data_and_summary",
                 "enum": ["data_only", "data_and_summary", "chart"],
             },
-            "session_id": {
-                "type": "string",
-                "description": "Hermes 会话 ID（可选，用于多轮映射）",
-                "default": "",
-            },
-            "user_id": {
-                "type": "string",
-                "description": "Hermes 用户 ID（可选）",
-                "default": "",
-            },
         },
         "required": ["question"],
     },
@@ -51,8 +41,11 @@ FOLLOWUP = {
                 "type": "string",
                 "description": "追问指令，例如：只看毛利率低于5%的产品",
             },
-            "session_id": {"type": "string", "default": ""},
-            "user_id": {"type": "string", "default": ""},
+            "response_mode": {
+                "type": "string",
+                "default": "data_and_summary",
+                "enum": ["data_only", "data_and_summary", "chart"],
+            },
         },
         "required": ["instruction"],
     },
@@ -72,8 +65,6 @@ EXPLAIN = {
                 "description": "可选的 query_id；默认解释最近一次查询",
                 "default": "",
             },
-            "session_id": {"type": "string", "default": ""},
-            "user_id": {"type": "string", "default": ""},
         },
         "required": [],
     },
@@ -87,10 +78,7 @@ RESET = {
     ),
     "parameters": {
         "type": "object",
-        "properties": {
-            "session_id": {"type": "string", "default": ""},
-            "user_id": {"type": "string", "default": ""},
-        },
+        "properties": {},
         "required": [],
     },
 }
