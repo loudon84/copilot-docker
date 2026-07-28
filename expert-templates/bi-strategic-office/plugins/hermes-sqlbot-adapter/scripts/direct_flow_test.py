@@ -20,10 +20,20 @@ from sqlbot_adapter.errors import SqlbotAdapterError
 def main() -> int:
     parser = argparse.ArgumentParser(description="SQLBot direct flow via formal client")
     parser.add_argument("--question", default="查询应收交易编号 101IN26070199 的交易明细")
+    parser.add_argument("--url", default="", help="覆盖 SQLBOT_MCP_URL")
+    parser.add_argument("--oid", default="", help="覆盖 SQLBOT_WORKSPACE_ID (oid)")
+    parser.add_argument("--datasource-id", default="", help="覆盖 SQLBOT_DEFAULT_DATASOURCE_ID")
     parser.add_argument("--skip-question", action="store_true")
     args = parser.parse_args()
 
     cfg = load_config()
+    if args.url:
+        cfg.mcp_url = args.url.strip()
+    if args.oid:
+        cfg.workspace_id = args.oid.strip()
+    if args.datasource_id:
+        cfg.default_datasource_id = args.datasource_id.strip()
+
     if not cfg.is_configured():
         print("FAIL: missing config:", ", ".join(cfg.missing_required()))
         return 1
@@ -35,7 +45,6 @@ def main() -> int:
         started = client.start()
         _tok = str(started.get("access_token") or "")
         print("L2 OK: mcp_start chat_id present=", bool(started.get("chat_id")))
-        # Do not print token
         ws = client.list_workspaces(access_token=_tok)
         print("L3 OK: workspaces count=", len(ws))
         ds = client.list_datasources(access_token=_tok)
@@ -46,6 +55,8 @@ def main() -> int:
             args.question,
             chat_id=str(started.get("chat_id") or ""),
             access_token=_tok,
+            datasource_id=cfg.default_datasource_id,
+            workspace_id=cfg.workspace_id,
         )
         if result.error:
             print(
@@ -60,6 +71,7 @@ def main() -> int:
             "sql_present": bool(result.sql),
             "row_count": len(result.rows or []),
             "title": result.title,
+            "upstream_record_id": result.upstream_record_id,
         }
         print("L5 OK:", json.dumps(out, ensure_ascii=False))
         return 0

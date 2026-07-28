@@ -1,11 +1,14 @@
 name: hermes-sqlbot-adapter
-version: "1.11.1"
+version: "1.12.0"
 description: SQLBot MCP SSE adapter for Hermes finance-bi toolset
 provides_tools:
   - finance_bi_ask
   - finance_bi_followup
   - finance_bi_explain
   - finance_bi_reset
+runtime_modes:
+  - directory_plugin
+  - pip_wheel
 requires_env:
   - SQLBOT_MCP_URL
   - SQLBOT_USERNAME
@@ -13,3 +16,18 @@ requires_env:
   - SQLBOT_WORKSPACE_ID
   - SQLBOT_DEFAULT_DATASOURCE_ID
   - SQLBOT_SESSION_ENCRYPTION_KEY
+optional_env:
+  - SQLBOT_DATASOURCE_ALIASES
+  - SQLBOT_DATASOURCES_JSON
+  - SQLBOT_VERIFY_SSL
+  - SQLBOT_LANG
+  - SQLBOT_MODEL_RESULT_ROWS
+  - SQLBOT_MAX_RESULT_ROWS
+  - SQLBOT_MAX_RESULT_COLUMNS
+  - SQLBOT_MAX_RESULT_BYTES
+  - SQLBOT_QUERY_RETENTION_DAYS
+  - SQLBOT_AUDIT_RETENTION_DAYS
+  - SQLBOT_CLI_SESSION_ID
+notes: |
+  SQL Guard 为执行后校验，不能阻止 SQLBot 已完成的数据库执行。
+  业务数据源必须使用只读账号。finance_bi_ask 每次新建 SQLBot 对话。

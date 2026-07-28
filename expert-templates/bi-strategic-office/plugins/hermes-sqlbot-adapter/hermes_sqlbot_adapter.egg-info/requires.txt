@@ -1,0 +1,9 @@
+mcp==1.26.0
+anyio==4.14.2
+httpx==0.28.1
+sqlglot<27,>=26
+cryptography<45,>=43
+PyYAML<7,>=6.0
+
+[dev]
+pytest<9,>=8

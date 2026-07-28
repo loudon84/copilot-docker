@@ -1,0 +1,13 @@
+Metadata-Version: 2.4
+Name: hermes-sqlbot-adapter
+Version: 1.12.0
+Summary: SQLBot MCP SSE adapter plugin for Hermes finance-bi toolset
+Requires-Python: >=3.11
+Requires-Dist: mcp==1.26.0
+Requires-Dist: anyio==4.14.2
+Requires-Dist: httpx==0.28.1
+Requires-Dist: sqlglot<27,>=26
+Requires-Dist: cryptography<45,>=43
+Requires-Dist: PyYAML<7,>=6.0
+Provides-Extra: dev
+Requires-Dist: pytest<9,>=8; extra == "dev"

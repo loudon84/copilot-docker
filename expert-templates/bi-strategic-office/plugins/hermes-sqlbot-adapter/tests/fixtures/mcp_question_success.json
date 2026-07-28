@@ -1,0 +1,15 @@
+{
+  "success": true,
+  "record_id": 60,
+  "title": "交易凭证101IN26070194销售利",
+  "sql": "SELECT detail_id, ar_trx_number FROM sales_profit WHERE ar_trx_number = '101IN26070194'",
+  "data": {
+    "fields": ["detail_id", "ar_trx_number"],
+    "data": [
+      {
+        "detail_id": 28799177.0,
+        "ar_trx_number": "101IN26070194"
+      }
+    ]
+  }
+}

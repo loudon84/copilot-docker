@@ -48,20 +48,26 @@ def normalize_question_result(
     datasource_name: str = "",
     query_id: str = "",
     rows: Optional[List[Dict[str, Any]]] = None,
+    columns: Optional[List[Any]] = None,
     truncated: bool = False,
     original_row_count: Optional[int] = None,
     warnings: Optional[List[str]] = None,
-    include_chart: bool = True,
+    include_chart: bool = False,
     include_summary: bool = True,
+    request_id: str = "",
+    upstream_record_id: str = "",
 ) -> NormalizedResult:
-    dict_rows = rows if rows is not None else rows_as_dicts(result.rows, result.columns)
-    columns = _normalize_columns(result.columns, dict_rows)
+    cols_src = columns if columns is not None else result.columns
+    dict_rows = rows if rows is not None else rows_as_dicts(result.rows, cols_src)
+    col_defs = _normalize_columns(cols_src, dict_rows)
     qid = query_id or new_query_id()
     row_count = original_row_count if original_row_count is not None else len(dict_rows)
+    upstream = upstream_record_id or getattr(result, "upstream_record_id", "") or ""
 
     payload = NormalizedResult(
         success=True,
         query_id=qid,
+        upstream_record_id=str(upstream) if upstream else "",
         title=result.title or question[:80],
         datasource={
             "key": datasource_key or "",
@@ -72,9 +78,10 @@ def normalize_question_result(
             "sql": result.sql or "",
             "filters": list(result.filters or []),
             "row_count": row_count,
+            "returned_row_count": len(dict_rows),
             "truncated": bool(truncated),
         },
-        columns=columns,
+        columns=col_defs,
         rows=dict_rows,
         chart=result.chart if include_chart else None,
         summary=result.summary if include_summary else None,
@@ -82,8 +89,8 @@ def normalize_question_result(
         meta={
             "generated_at": _now_iso(),
             "source": "sqlbot",
+            "request_id": request_id or "",
         },
     )
-    # Ensure no secrets leak from nested chart/summary
     scrubbed = scrub_secrets(payload.to_dict())
     return NormalizedResult(**scrubbed)

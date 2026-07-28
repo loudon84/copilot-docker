@@ -1,0 +1,4 @@
+{
+  "message": "{\"type\": \"exec-sql-err\", \"message\": \"Execute SQL Failed\", \"traceback\": \"DetachedInstanceError: instance is not bound\"}",
+  "sql": "SELECT 1"
+}

@@ -1,0 +1,7 @@
+{
+  "success": false,
+  "message": "Execute SQL Failed",
+  "type": "exec-sql-err",
+  "sql": "SELECT 1",
+  "traceback": "Execute SQL Failed: connection reset"
+}

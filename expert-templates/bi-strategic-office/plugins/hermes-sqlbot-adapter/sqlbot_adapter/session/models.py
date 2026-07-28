@@ -1,4 +1,4 @@
-"""Session models (schema v2)."""
+"""Session models (schema v3)."""
 
 from __future__ import annotations
 
@@ -23,6 +23,34 @@ class SessionRecord:
     last_question: str = ""
     last_title: str = ""
     last_payload_json: str = ""
+    session_version: int = 3
+    last_upstream_record_id: str = ""
+    last_response_mode: str = ""
+    last_error_code: str = ""
 
 
-SCHEMA_VERSION = 2
+@dataclass
+class QueryRecord:
+    query_id: str
+    profile_name: str
+    hermes_session_id: str
+    hermes_user_id: str
+    question: str = ""
+    generated_sql: str = ""
+    datasource_id: str = ""
+    workspace_id: str = ""
+    status: str = "ok"
+    error_code: str = ""
+    error_message: str = ""
+    created_at: str = ""
+    completed_at: str = ""
+    upstream_record_id: str = ""
+    query_payload_json: str = ""
+    title: str = ""
+    row_count: int = 0
+    returned_row_count: int = 0
+    truncated: int = 0
+    request_id: str = ""
+
+
+SCHEMA_VERSION = 3

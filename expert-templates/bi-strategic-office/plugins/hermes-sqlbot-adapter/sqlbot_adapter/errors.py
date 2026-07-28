@@ -1,4 +1,4 @@
-"""Error codes and exceptions for hermes-sqlbot-adapter (v1.11.1)."""
+"""Error codes and exceptions for hermes-sqlbot-adapter (v1.12.0)."""
 
 from __future__ import annotations
 
@@ -14,6 +14,7 @@ class ErrorCode(str, Enum):
     SQLBOT_MCP_TOOL_UNAVAILABLE = "SQLBOT_MCP_TOOL_UNAVAILABLE"
     SQLBOT_AUTH_FAILED = "SQLBOT_AUTH_FAILED"
     SQLBOT_SESSION_EXPIRED = "SQLBOT_SESSION_EXPIRED"
+    SQLBOT_TOKEN_EXPIRED = "SQLBOT_TOKEN_EXPIRED"
     SQLBOT_WORKSPACE_NOT_FOUND = "SQLBOT_WORKSPACE_NOT_FOUND"
     SQLBOT_DATASOURCE_NOT_FOUND = "SQLBOT_DATASOURCE_NOT_FOUND"
     SQLBOT_QUERY_GENERATION_FAILED = "SQLBOT_QUERY_GENERATION_FAILED"
@@ -21,21 +22,27 @@ class ErrorCode(str, Enum):
     SQLBOT_DATASOURCE_SESSION_ERROR = "SQLBOT_DATASOURCE_SESSION_ERROR"
     SQLBOT_RESPONSE_INVALID = "SQLBOT_RESPONSE_INVALID"
     SQLBOT_UNAVAILABLE = "SQLBOT_UNAVAILABLE"
+    SQLBOT_TIMEOUT = "SQLBOT_TIMEOUT"
+    SQLBOT_TOOL_ERROR = "SQLBOT_TOOL_ERROR"
+    SQLBOT_CONCURRENT_REQUEST = "SQLBOT_CONCURRENT_REQUEST"
     FILTER_NOT_PRESERVED = "FILTER_NOT_PRESERVED"
     UNSAFE_SQL = "UNSAFE_SQL"
     DETAIL_QUERY_REQUIRES_FILTER = "DETAIL_QUERY_REQUIRES_FILTER"
     RESULT_TOO_LARGE = "RESULT_TOO_LARGE"
+    RESULT_TOO_MANY_COLUMNS = "RESULT_TOO_MANY_COLUMNS"
     QUERY_CONTEXT_NOT_FOUND = "QUERY_CONTEXT_NOT_FOUND"
     RUNTIME_CONTEXT_UNAVAILABLE = "RUNTIME_CONTEXT_UNAVAILABLE"
     INVALID_ARGUMENT = "INVALID_ARGUMENT"
+    INVALID_DATASOURCE_KEY = "INVALID_DATASOURCE_KEY"
     INTERNAL_ERROR = "INTERNAL_ERROR"
 
 
-# Errors that may retry once (transport / initialize only)
 RETRYABLE = frozenset(
     {
         ErrorCode.SQLBOT_TRANSPORT_ERROR,
         ErrorCode.SQLBOT_INITIALIZE_FAILED,
+        ErrorCode.SQLBOT_TIMEOUT,
+        ErrorCode.SQLBOT_UNAVAILABLE,
     }
 )
 
@@ -50,6 +57,8 @@ class SqlbotAdapterError(Exception):
         source: str = "adapter",
         retryable: bool | None = None,
         traceback_text: str = "",
+        query_id: str = "",
+        upstream_record_id: str = "",
     ):
         super().__init__(message)
         self.code = code
@@ -58,6 +67,8 @@ class SqlbotAdapterError(Exception):
         self.source = source
         self.retryable = RETRYABLE.__contains__(code) if retryable is None else bool(retryable)
         self.traceback_text = traceback_text or ""
+        self.query_id = query_id or ""
+        self.upstream_record_id = upstream_record_id or ""
 
     def to_dict(self) -> Dict[str, Any]:
         err: Dict[str, Any] = {
@@ -66,9 +77,24 @@ class SqlbotAdapterError(Exception):
             "retryable": self.retryable,
             "source": self.source,
         }
-        # Never put traceback into tool result
+        if self.query_id:
+            err["query_id"] = self.query_id
+        if self.upstream_record_id:
+            err["upstream_record_id"] = self.upstream_record_id
         if self.details:
-            safe = {k: v for k, v in self.details.items() if k.lower() not in {"traceback", "access_token", "password", "token"}}
+            safe = {
+                k: v
+                for k, v in self.details.items()
+                if str(k).lower()
+                not in {
+                    "traceback",
+                    "access_token",
+                    "password",
+                    "token",
+                    "chat_id",
+                    "sqlbot_chat_id",
+                }
+            }
             if safe:
                 err["details"] = safe
         return {"success": False, "error": err}
@@ -100,7 +126,12 @@ def classify_sqlbot_failure(
             traceback_text=traceback_text,
             details={"sqlbot_type": err_type} if err_type else None,
         )
-    if "auth" in lower or "login" in lower or "unauthorized" in lower:
+    if (
+        "auth" in lower
+        or "login" in lower
+        or "unauthorized" in lower
+        or ("token" in lower and "expir" in lower)
+    ):
         return SqlbotAdapterError(
             ErrorCode.SQLBOT_AUTH_FAILED,
             "SQLBot 登录失败。",
@@ -143,6 +174,8 @@ SENSITIVE_KEYS = frozenset(
         "refresh_token",
         "traceback",
         "sqlbot_session_encryption_key",
+        "session_encryption_key",
+        "encryption_key",
     }
 )
 

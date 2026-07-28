@@ -1,0 +1,2 @@
+[hermes_agent.plugins]
+hermes-sqlbot-adapter = sqlbot_adapter.plugin:register

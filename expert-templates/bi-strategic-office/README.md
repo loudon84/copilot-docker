@@ -1,13 +1,13 @@
-# bi-strategic-office（专家包 v1.11.1）
+# bi-strategic-office（专家包）
 
 财务经营分析办公室（BI 智能问数）：Hermes 通过 `hermes-sqlbot-adapter` 以 **MCP SSE** 调用外部 **SQLBot** 取数；SQLBot 负责 Text-to-SQL / 执行 / 图表，Hermes 负责经营分析与报告。进程内插件，**不**注册原始 SQL Tool，**不**修改 SQLBot 源码。
 
-> **v1.11.1 hotfix**：官方 MCP SSE Client、会话 Token Fernet 加密、错误分类（含 Datasource Session）、Doctor `--deep`。后续修改只允许进入本目录。
+> **Adapter v1.12.0**：对齐已验证 MCP 协议（`token`/`oid`/`stream`/`lang`/`return_img`）、成功体 `data.fields`+`data.data` 解析、`ask` 每次新建对话、Session Store v3、Handler 参数字典兼容。详见 [plugins/hermes-sqlbot-adapter/README.md](plugins/hermes-sqlbot-adapter/README.md)。
 
 - **业务使用指南**：[GUIDE.md](GUIDE.md)
 - **架构 / 安装 / SQLBot 集成**：[docs/architecture.md](docs/architecture.md) · [docs/installation.md](docs/installation.md) · [docs/sqlbot-integration.md](docs/sqlbot-integration.md)
 - **SQLBot 实施记录模板**：[docs/sqlbot-example.md](docs/sqlbot-example.md)
-- **PRD**：[prd/bi-strategic-office-prd-v1.11.md](prd/bi-strategic-office-prd-v1.11.md) · [prd/bi-strategic-office-prd-v1.11.1_hotfix.md](prd/bi-strategic-office-prd-v1.11.1_hotfix.md)
+- **PRD**：[prd/bi-strategic-office-prd-v1.11.md](prd/bi-strategic-office-prd-v1.11.md) · [prd/bi-strategic-office-prd-v1.11.1_hotfix.md](prd/bi-strategic-office-prd-v1.11.1_hotfix.md) · 仓库根 [prd/v1.12_hotfix-sqlbot-adapter.md](../../prd/v1.12_hotfix-sqlbot-adapter.md)
 
 ## 能力边界
 
@@ -65,4 +65,4 @@ bash scripts/up-instance.sh <profile>
 bash expert-templates/bi-strategic-office/bin/doctor.sh --profile <profile> --deep
 ```
 
-`install.sh` 会创建 `sqlbot-adapter/state|audit`、初始化 SQLite schema v2，并写 `package-state.yaml`。
+`install.sh` 会创建 `sqlbot-adapter/state|audit`、初始化 SQLite schema v3（可从 v2 幂等迁移），并写 `package-state.yaml`。

@@ -20,6 +20,7 @@ from sqlbot_adapter.errors import (  # noqa: F401
 class NormalizedResult:
     success: bool = True
     query_id: str = ""
+    upstream_record_id: str = ""
     title: str = ""
     datasource: Dict[str, Any] = field(default_factory=dict)
     query: Dict[str, Any] = field(default_factory=dict)

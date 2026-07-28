@@ -15,7 +15,7 @@ if str(_PLUGIN_ROOT) not in sys.path:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Init sqlbot session store schema")
+    parser = argparse.ArgumentParser(description="Init sqlbot session store schema v3")
     parser.add_argument("--data-dir", default="", help="Hermes data dir (contains sqlbot-adapter/)")
     parser.add_argument("--db", default="", help="Explicit sqlite path")
     parser.add_argument("--encryption-key", default="", help="SQLBOT_SESSION_ENCRYPTION_KEY")

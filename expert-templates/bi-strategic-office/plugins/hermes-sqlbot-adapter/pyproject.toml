@@ -1,6 +1,6 @@
 [project]
 name = "hermes-sqlbot-adapter"
-version = "1.11.1"
+version = "1.12.0"
 description = "SQLBot MCP SSE adapter plugin for Hermes finance-bi toolset"
 requires-python = ">=3.11"
 dependencies = [
@@ -12,10 +12,20 @@ dependencies = [
   "PyYAML>=6.0,<7",
 ]
 
+[project.optional-dependencies]
+dev = ["pytest>=8,<9"]
+
+[project.entry-points."hermes_agent.plugins"]
+hermes-sqlbot-adapter = "sqlbot_adapter.plugin:register"
+
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools]
-py-modules = ["schemas"]
-packages = ["sqlbot_adapter"]
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["sqlbot_adapter*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

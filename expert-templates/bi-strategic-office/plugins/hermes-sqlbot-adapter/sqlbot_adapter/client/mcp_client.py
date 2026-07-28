@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
+
+import httpx
 
 from sqlbot_adapter.async_bridge import run_coro
 from sqlbot_adapter.client.result_parser import (
@@ -43,8 +46,13 @@ class QuestionResult:
     summary: Any = None
     title: str = ""
     chat_id: str = ""
+    upstream_record_id: str = ""
     filters: List[Any] = field(default_factory=list)
     error: Optional[SqlbotAdapterError] = None
+
+
+def _response_mode_to_return_img(response_mode: str) -> bool:
+    return (response_mode or "").strip() == "chart"
 
 
 class SQLBotMCPClient:
@@ -59,6 +67,34 @@ class SQLBotMCPClient:
         if kind == "login":
             return float(self.config.login_timeout_seconds)
         return float(self.config.request_timeout_seconds)
+
+    def _httpx_client_factory(self):
+        verify = bool(self.config.verify_ssl)
+        connect = float(self.config.connect_timeout_seconds)
+        read = float(self.config.read_timeout_seconds)
+        write = float(self.config.write_timeout_seconds)
+        pool = float(self.config.pool_timeout_seconds)
+
+        def factory(
+            headers: dict | None = None,
+            timeout: httpx.Timeout | None = None,
+            auth: Any = None,
+        ) -> httpx.AsyncClient:
+            to = timeout or httpx.Timeout(
+                connect=connect,
+                read=read,
+                write=write,
+                pool=pool,
+            )
+            return httpx.AsyncClient(
+                headers=headers,
+                timeout=to,
+                auth=auth,
+                verify=verify,
+                follow_redirects=True,
+            )
+
+        return factory
 
     async def _call_tool_once(
         self,
@@ -79,33 +115,50 @@ class SQLBotMCPClient:
                 "缺少 mcp SDK，请安装 mcp==1.26.0",
             ) from exc
 
+        # Never log token/password from arguments
+        safe_keys = {k for k in (arguments or {}) if k not in {"token", "password", "access_token", "username"}}
+        logger.debug("MCP call_tool name=%s keys=%s", tool_name, sorted(safe_keys))
+
         try:
-            async with sse_client(self.config.mcp_url) as streams:
-                read_stream, write_stream = streams
-                async with ClientSession(read_stream, write_stream) as session:
-                    try:
-                        await session.initialize()
-                    except Exception as exc:
-                        raise SqlbotAdapterError(
-                            ErrorCode.SQLBOT_INITIALIZE_FAILED,
-                            f"MCP initialize 失败: {type(exc).__name__}",
-                            source="sqlbot",
-                        ) from exc
-                    try:
-                        return await session.call_tool(tool_name, arguments or {})
-                    except Exception as exc:
-                        msg = str(exc)
-                        if "Unknown tool" in msg or "not found" in msg.lower():
+            async with asyncio.timeout(timeout):
+                async with sse_client(
+                    self.config.mcp_url,
+                    timeout=float(self.config.connect_timeout_seconds),
+                    sse_read_timeout=float(timeout),
+                    httpx_client_factory=self._httpx_client_factory(),
+                ) as streams:
+                    read_stream, write_stream = streams
+                    async with ClientSession(read_stream, write_stream) as session:
+                        try:
+                            await session.initialize()
+                        except Exception as exc:
                             raise SqlbotAdapterError(
-                                ErrorCode.SQLBOT_MCP_TOOL_UNAVAILABLE,
-                                f"固定工具不可调用: {tool_name}",
+                                ErrorCode.SQLBOT_INITIALIZE_FAILED,
+                                f"MCP initialize 失败: {type(exc).__name__}",
                                 source="sqlbot",
                             ) from exc
-                        raise SqlbotAdapterError(
-                            ErrorCode.SQLBOT_TRANSPORT_ERROR,
-                            f"MCP call_tool 失败: {type(exc).__name__}",
-                            source="sqlbot",
-                        ) from exc
+                        try:
+                            return await session.call_tool(tool_name, arguments or {})
+                        except Exception as exc:
+                            msg = str(exc)
+                            if "Unknown tool" in msg or "not found" in msg.lower():
+                                raise SqlbotAdapterError(
+                                    ErrorCode.SQLBOT_MCP_TOOL_UNAVAILABLE,
+                                    f"固定工具不可调用: {tool_name}",
+                                    source="sqlbot",
+                                ) from exc
+                            raise SqlbotAdapterError(
+                                ErrorCode.SQLBOT_TRANSPORT_ERROR,
+                                f"MCP call_tool 失败: {type(exc).__name__}",
+                                source="sqlbot",
+                            ) from exc
+        except TimeoutError as exc:
+            raise SqlbotAdapterError(
+                ErrorCode.SQLBOT_TIMEOUT,
+                f"SQLBot MCP 调用超时（{timeout}s）",
+                source="adapter",
+                retryable=True,
+            ) from exc
         except SqlbotAdapterError:
             raise
         except Exception as exc:
@@ -165,21 +218,28 @@ class SQLBotMCPClient:
                 "缺少 mcp SDK",
             ) from exc
 
-        async with sse_client(self.config.mcp_url) as streams:
-            read_stream, write_stream = streams
-            async with ClientSession(read_stream, write_stream) as session:
-                await session.initialize()
-                if hasattr(session, "send_ping"):
-                    try:
-                        await session.send_ping()
-                    except Exception:
-                        logger.warning("MCP ping failed (non-fatal)")
-                return True
+        timeout = self._timeout("connect")
+        async with asyncio.timeout(timeout + 10):
+            async with sse_client(
+                self.config.mcp_url,
+                timeout=float(self.config.connect_timeout_seconds),
+                sse_read_timeout=float(timeout + 10),
+                httpx_client_factory=self._httpx_client_factory(),
+            ) as streams:
+                read_stream, write_stream = streams
+                async with ClientSession(read_stream, write_stream) as session:
+                    await session.initialize()
+                    if hasattr(session, "send_ping"):
+                        try:
+                            await session.send_ping()
+                        except Exception:
+                            logger.warning("MCP ping failed (non-fatal)")
+                    return True
 
     def initialize_and_ping_sync(self) -> bool:
         return run_coro(
             self.initialize_and_ping(),
-            timeout=self._timeout("connect") + 10,
+            timeout=self._timeout("connect") + 15,
         )
 
     async def list_tools_names(self) -> List[str]:
@@ -190,12 +250,19 @@ class SQLBotMCPClient:
         except ImportError:
             return []
         try:
-            async with sse_client(self.config.mcp_url) as streams:
-                read_stream, write_stream = streams
-                async with ClientSession(read_stream, write_stream) as session:
-                    await session.initialize()
-                    result = await session.list_tools()
-                    return [t.name for t in (result.tools or [])]
+            timeout = self._timeout("connect")
+            async with asyncio.timeout(timeout + 10):
+                async with sse_client(
+                    self.config.mcp_url,
+                    timeout=float(self.config.connect_timeout_seconds),
+                    sse_read_timeout=float(timeout + 10),
+                    httpx_client_factory=self._httpx_client_factory(),
+                ) as streams:
+                    read_stream, write_stream = streams
+                    async with ClientSession(read_stream, write_stream) as session:
+                        await session.initialize()
+                        result = await session.list_tools()
+                        return [t.name for t in (result.tools or [])]
         except Exception as exc:
             logger.warning("tools/list incompatible or failed: %s", type(exc).__name__)
             return []
@@ -228,7 +295,7 @@ class SQLBotMCPClient:
     def list_workspaces(self, access_token: str = "") -> List[Dict[str, Any]]:
         args: Dict[str, Any] = {}
         if access_token:
-            args["access_token"] = access_token
+            args["token"] = access_token
         data = self.call_tool_sync(SQLBOT_TOOL_WS_LIST, args, retry_transport=True)
         items = data.get("workspaces") or data.get("data") or data.get("items") or []
         return items if isinstance(items, list) else []
@@ -239,11 +306,10 @@ class SQLBotMCPClient:
         workspace_id: str = "",
         access_token: str = "",
     ) -> List[Dict[str, Any]]:
-        args: Dict[str, Any] = {
-            "workspace_id": workspace_id or self.config.workspace_id,
-        }
+        oid = workspace_id or self.config.workspace_id
+        args: Dict[str, Any] = {"oid": oid}
         if access_token:
-            args["access_token"] = access_token
+            args["token"] = access_token
         data = self.call_tool_sync(SQLBOT_TOOL_DATASOURCE_LIST, args, retry_transport=True)
         items = data.get("datasources") or data.get("data") or data.get("items") or []
         return items if isinstance(items, list) else []
@@ -258,16 +324,27 @@ class SQLBotMCPClient:
         workspace_id: str = "",
         response_mode: str = "data_and_summary",
     ) -> QuestionResult:
+        ds_id = (datasource_id or self.config.default_datasource_id or "").strip()
         args: Dict[str, Any] = {
             "question": question,
-            "workspace_id": workspace_id or self.config.workspace_id,
-            "datasource_id": datasource_id or self.config.default_datasource_id,
-            "response_mode": response_mode,
+            "stream": False,
+            "lang": self.config.lang or "zh-CN",
+            "return_img": _response_mode_to_return_img(response_mode),
         }
-        if chat_id:
-            args["chat_id"] = chat_id
         if access_token:
-            args["access_token"] = access_token
+            args["token"] = access_token
+        if chat_id:
+            # SQLBot may expect int chat_id
+            try:
+                args["chat_id"] = int(chat_id)
+            except (TypeError, ValueError):
+                args["chat_id"] = chat_id
+        if ds_id:
+            args["datasource_id"] = ds_id
+        else:
+            oid = (workspace_id or self.config.workspace_id or "").strip()
+            if oid:
+                args["oid"] = oid
 
         # No automatic retry after question is submitted
         data = self.call_tool_sync(
@@ -285,7 +362,8 @@ class SQLBotMCPClient:
             chart=parsed.chart,
             summary=parsed.summary,
             title=parsed.title,
-            chat_id=parsed.chat_id or chat_id,
+            chat_id=parsed.chat_id or str(chat_id or ""),
+            upstream_record_id=parsed.upstream_record_id,
             filters=parsed.filters,
             error=parsed.error,
         )
