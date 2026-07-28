@@ -18,3 +18,12 @@ local-registry.env
 # Asset bundles - exclude binary archives and pip freeze snapshots
 asset-bundles/*/*.tgz
 asset-bundles/*/pip-freeze.txt
+# Expert Factory build outputs
+dist/experts/*.expert.bundle
+dist/experts/*.build.json
+dist/experts/*.sha256
+.workcopilot/
+
+# Expert evaluation runtime outputs
+evaluations/results/
+.workcopilot/cache/

@@ -1,0 +1,82 @@
+schema_version: workcopilot.expert.v1
+kind: expert
+metadata:
+  id: sale
+  name: 企业销售助手
+  version: 2.0.0
+  description: 销售发现、方案、管线健康与成交评估专家
+  category: sales
+  tags:
+  - sale
+  - sales
+  language: zh-CN
+  owner: copilot-docker
+runtime:
+  engine: hermes
+  mode: single
+  compatibility:
+    hermes: '>=0.18.2'
+    python: '>=3.11'
+  entrypoints:
+    soul: SOUL.md
+    agents: workspace/AGENTS.md
+components:
+  skills:
+  - id: sales-account-plan
+    path: skills/sales/sales-account-plan
+    required: true
+  - id: sales-call-review
+    path: skills/sales/sales-call-review
+    required: true
+  - id: sales-deal-assessment
+    path: skills/sales/sales-deal-assessment
+    required: true
+  - id: sales-discovery-brief
+    path: skills/sales/sales-discovery-brief
+    required: true
+  - id: sales-outbound-sequence
+    path: skills/sales/sales-outbound-sequence
+    required: true
+  - id: sales-pipeline-health
+    path: skills/sales/sales-pipeline-health
+    required: true
+  - id: sales-proposal-brief
+    path: skills/sales/sales-proposal-brief
+    required: true
+  - id: sales-technical-discovery
+    path: skills/sales/sales-technical-discovery
+    required: true
+  tools: []
+  plugins: []
+  policies:
+  - path: policies/tool-policy.yaml
+  - path: policies/data-policy.yaml
+  - path: policies/sale-playbook.yaml
+connector_slots: []
+permissions:
+  tools:
+    default: deny
+    allow: []
+    deny:
+    - terminal
+    - write_file
+  network:
+    default: deny
+    connector_slots: []
+  data:
+    maximum_classification: internal
+    export_allowed: false
+evaluations:
+  suite: evaluations/cases.yaml
+  minimum_score: 0.9
+  required_gates:
+  - schema
+  - security
+release:
+  publishable: true
+  approval:
+    business: required
+    security: required
+provenance:
+  source_repository: loudon84/copilot-docker
+  derived_from: null

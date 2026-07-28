@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workcopilot.local/schemas/expert-v1.schema.json",
+  "title": "workcopilot.expert.v1",
+  "type": "object",
+  "required": ["schema_version", "kind", "metadata", "runtime"],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": {
+      "const": "workcopilot.expert.v1"
+    },
+    "kind": {
+      "const": "expert"
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["id", "name", "version", "description", "language"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{2,63}$"
+        },
+        "name": { "type": "string", "minLength": 1 },
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+([.-][A-Za-z0-9.-]+)?$"
+        },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "language": { "type": "string" },
+        "owner": { "type": "string" }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "required": ["engine", "mode"],
+      "properties": {
+        "engine": { "const": "hermes" },
+        "mode": { "enum": ["single", "team"] },
+        "compatibility": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "entrypoints": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+    "components": {
+      "type": "object",
+      "properties": {
+        "skills": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/componentRef" }
+        },
+        "tools": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/componentRef" }
+        },
+        "plugins": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/componentRef" }
+        },
+        "policies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["path"],
+            "properties": {
+              "path": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "connector_slots": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "permissions": { "type": "object" },
+    "evaluations": {
+      "type": "object",
+      "properties": {
+        "suite": { "type": "string" },
+        "minimum_score": { "type": "number", "minimum": 0, "maximum": 1 },
+        "required_gates": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "release": { "type": "object" },
+    "provenance": { "type": "object" }
+  },
+  "$defs": {
+    "componentRef": {
+      "type": "object",
+      "required": ["id", "path"],
+      "properties": {
+        "id": { "type": "string" },
+        "path": { "type": "string" },
+        "required": { "type": "boolean" },
+        "version": { "type": "string" }
+      }
+    }
+  }
+}

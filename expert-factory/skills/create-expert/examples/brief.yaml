@@ -1,0 +1,13 @@
+name: 示例应收风险专家
+id: finance-receivable-risk-demo
+business_goal: 识别客户逾期和回款风险
+users:
+  - 财务经理
+required_capabilities:
+  - 查询应收账龄
+  - 输出风险清单
+external_systems:
+  - SQLBot
+constraints:
+  - 只读
+  - 不允许修改 ERP

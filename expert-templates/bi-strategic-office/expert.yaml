@@ -1,53 +1,108 @@
-schema_version: 1
-
-expert:
+schema_version: workcopilot.expert.v1
+kind: expert
+metadata:
   id: bi-strategic-office
   name: 财务经营分析办公室
-  version: 1.11.1
-  type: expert
+  version: 2.0.0
   description: 财务分析、SQLBot 智能问数和经营分析专家
-
-compatibility:
-  python: ">=3.11"
-
+  category: finance-bi
+  tags:
+  - bi
+  - sqlbot
+  - finance
+  language: zh-CN
+  owner: copilot-docker
 runtime:
-  soul: runtime/SOUL.md
-  memory: runtime/memories/MEMORY.md
-  config_patch: runtime/config.patch.yaml
-
-assets:
+  engine: hermes
+  mode: single
+  compatibility:
+    hermes: '>=0.18.2'
+    python: '>=3.11'
+  entrypoints:
+    soul: runtime/SOUL.md
+    config_patch: runtime/config.patch.yaml
+components:
   skills:
-    source: runtime/skills
-    target: skills
-
-plugins:
+  - id: bi-office-orchestration
+    path: runtime/skills/bi-office-orchestration
+    required: true
+  - id: data-quality-review
+    path: runtime/skills/data-quality-review
+    required: true
+  - id: finance-bi-query
+    path: runtime/skills/finance-bi-query
+    required: true
+  - id: finance-performance-analysis
+    path: runtime/skills/finance-performance-analysis
+    required: true
+  - id: management-reporting
+    path: runtime/skills/management-reporting
+    required: true
+  - id: sqlbot-query-review
+    path: runtime/skills/sqlbot-query-review
+    required: true
+  tools: []
+  plugins:
   - id: hermes-sqlbot-adapter
-    source: plugins/hermes-sqlbot-adapter
-    target: plugins/hermes-sqlbot-adapter
-
-lifecycle:
-  install: bin/install.sh
-  post_start: bin/post-start.sh
-  update: bin/update.sh
-  validate: bin/validate.sh
-  doctor: bin/doctor.sh
-  test: bin/test.sh
-
-runtime_directories:
-  - sqlbot-adapter/state
-  - sqlbot-adapter/audit
-  - workspace/exports/bi
-  - workspace/uploads
-
-required_env:
-  - SQLBOT_MCP_URL
-  - SQLBOT_USERNAME
-  - SQLBOT_PASSWORD
-  - SQLBOT_WORKSPACE_ID
-  - SQLBOT_DEFAULT_DATASOURCE_ID
-  - SQLBOT_SESSION_ENCRYPTION_KEY
-
-security:
-  allow_raw_sql: false
-  require_read_only_database: true
-  secrets_in_package: false
+    path: plugins/hermes-sqlbot-adapter
+    required: true
+    version: '>=1.0.0'
+  policies:
+  - path: policies/tool-policy.yaml
+  - path: policies/data-policy.yaml
+connector_slots:
+- id: finance-query
+  name: 财务查询连接
+  type: mcp
+  category: data-query
+  required: true
+  access_mode: read-only
+  capabilities:
+  - query-finance-data
+  - continue-query-session
+  allowed_tools: &id001
+  - finance_bi_ask
+  - finance_bi_followup
+  - finance_bi_explain
+  - finance_bi_reset
+  - finance_bi_connection_test
+  auth:
+    mode: managed-secret
+    required_fields:
+    - endpoint
+    - username
+    - password
+    - workspace_id
+  healthcheck:
+    tool: finance_bi_connection_test
+    timeout_seconds: 30
+  data_classification: confidential
+permissions:
+  tools:
+    default: deny
+    allow: *id001
+    deny:
+    - terminal
+    - write_file
+  network:
+    default: deny
+    connector_slots:
+    - finance-query
+  data:
+    maximum_classification: confidential
+    export_allowed: false
+evaluations:
+  suite: evaluations/cases.yaml
+  minimum_score: 0.9
+  required_gates:
+  - schema
+  - security
+  - tool-policy
+release:
+  publishable: true
+  approval:
+    business: required
+    security: required
+provenance:
+  source_repository: loudon84/copilot-docker
+  derived_from: null

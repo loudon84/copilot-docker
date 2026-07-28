@@ -1,0 +1,69 @@
+name: expert-release
+
+on:
+  push:
+    tags:
+      - "expert/*/v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release-expert-bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Parse tag
+        id: tag
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          # expert/<id>/v<version>
+          EXPERT_ID="$(echo "$TAG" | cut -d/ -f2)"
+          VERSION="$(echo "$TAG" | cut -d/ -f3 | sed 's/^v//')"
+          echo "expert_id=$EXPERT_ID" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          test -d "expert-templates/$EXPERT_ID"
+      - name: Install Expert Factory
+        run: pip install -e "expert-factory/[dev]"
+      - name: Check metadata.version matches tag
+        run: |
+          python - <<'PY'
+          import os, sys, yaml
+          from pathlib import Path
+          eid = os.environ["EXPERT_ID"]
+          ver = os.environ["VERSION"]
+          data = yaml.safe_load(Path(f"expert-templates/{eid}/expert.yaml").read_text(encoding="utf-8"))
+          meta = data.get("metadata") or {}
+          if meta.get("id") != eid:
+              print(f"metadata.id={meta.get('id')!r} != tag id {eid!r}", file=sys.stderr)
+              sys.exit(1)
+          if meta.get("version") != ver:
+              print(f"metadata.version={meta.get('version')!r} != tag version {ver!r}", file=sys.stderr)
+              sys.exit(1)
+          print("metadata ok", eid, ver)
+          PY
+        env:
+          EXPERT_ID: ${{ steps.tag.outputs.expert_id }}
+          VERSION: ${{ steps.tag.outputs.version }}
+      - name: Validate
+        run: python -m workcopilot_expert_factory.cli validate "expert-templates/${{ steps.tag.outputs.expert_id }}" --level full --format text
+      - name: Evaluate full
+        run: python -m workcopilot_expert_factory.cli evaluate "expert-templates/${{ steps.tag.outputs.expert_id }}" --mode full --format text
+      - name: Build release bundle
+        run: python -m workcopilot_expert_factory.cli build "expert-templates/${{ steps.tag.outputs.expert_id }}" --release --output dist/experts
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: ${{ steps.tag.outputs.expert_id }} v${{ steps.tag.outputs.version }}
+          files: |
+            dist/experts/${{ steps.tag.outputs.expert_id }}-${{ steps.tag.outputs.version }}.expert.bundle
+            dist/experts/${{ steps.tag.outputs.expert_id }}-${{ steps.tag.outputs.version }}.sha256
+            dist/experts/${{ steps.tag.outputs.expert_id }}-${{ steps.tag.outputs.version }}.build.json
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

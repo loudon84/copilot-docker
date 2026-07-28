@@ -62,3 +62,13 @@ grep HERMES_WEBUI_PASSWORD instances/writer/.env
 | 待审阅 Markdown 报告 | `workspace/reports` |
 | 最终交付物（docx/pdf/xlsx/pptx） | `workspace/exports` |
 | 审阅后的 IC 规格 Markdown | `obsidian-vault/80-Product-Spec` |
+
+
+## Expert Factory（v2.0）
+
+本模板已迁移至 `workcopilot.expert.v1`。
+
+```bash
+bash scripts/expert/expert validate expert-templates/writer --level full
+bash scripts/expert/expert build expert-templates/writer --output dist/experts --dev
+```

@@ -1,0 +1,81 @@
+schema_version: workcopilot.expert.v1
+kind: expert
+metadata:
+  id: writer
+  name: 中文写作专家
+  version: 2.0.0
+  description: 面向内容生产的中文写作与改写专家
+  category: writing
+  tags:
+  - writer
+  - content
+  language: zh-CN
+  owner: copilot-docker
+runtime:
+  engine: hermes
+  mode: single
+  compatibility:
+    hermes: '>=0.18.2'
+    python: '>=3.11'
+  entrypoints:
+    soul: SOUL.md
+    agents: workspace/AGENTS.md
+components:
+  skills:
+  - id: article-draft
+    path: skills/writing/article-draft
+    required: true
+  - id: article-outline
+    path: skills/writing/article-outline
+    required: true
+  - id: article-polish
+    path: skills/writing/article-polish
+    required: true
+  - id: content-calendar
+    path: skills/writing/content-calendar
+    required: true
+  - id: fact-check-research
+    path: skills/writing/fact-check-research
+    required: true
+  - id: platform-rewrite
+    path: skills/writing/platform-rewrite
+    required: true
+  - id: seo-writing
+    path: skills/writing/seo-writing
+    required: true
+  - id: writing-quality-review
+    path: skills/writing/writing-quality-review
+    required: true
+  tools: []
+  plugins: []
+  policies:
+  - path: policies/tool-policy.yaml
+  - path: policies/data-policy.yaml
+connector_slots: []
+permissions:
+  tools:
+    default: deny
+    allow: []
+    deny:
+    - terminal
+    - write_file
+  network:
+    default: deny
+    connector_slots: []
+  data:
+    maximum_classification: internal
+    export_allowed: false
+evaluations:
+  suite: evaluations/cases.yaml
+  minimum_score: 0.9
+  required_gates:
+  - schema
+  - security
+release:
+  publishable: true
+  approval:
+    business: required
+    security: required
+provenance:
+  source_repository: loudon84/copilot-docker
+  derived_from: null

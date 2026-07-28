@@ -1,0 +1,2 @@
+[console_scripts]
+workcopilot-expert = workcopilot_expert_factory.cli:app

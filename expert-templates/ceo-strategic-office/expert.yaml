@@ -1,0 +1,99 @@
+schema_version: workcopilot.expert.v1
+kind: expert
+metadata:
+  id: ceo-strategic-office
+  name: CEO 战略办公室
+  version: 2.0.0
+  description: CEO 战略办公室多 Profile 专家团队（编排、审议、治理）
+  category: strategy
+  tags:
+  - ceo
+  - team
+  - governance
+  language: zh-CN
+  owner: copilot-docker
+runtime:
+  engine: hermes
+  mode: team
+  compatibility:
+    hermes: '>=0.18.2'
+    python: '>=3.11'
+  entrypoints:
+    soul: root/SOUL.md
+    agents: root/workspace/AGENTS.md
+    team: team.yaml
+components:
+  skills:
+  - id: board-brief
+    path: skills/board-brief
+    required: true
+  - id: ceo-team-orchestrator
+    path: skills/ceo-team-orchestrator
+    required: true
+  - id: decision-log
+    path: skills/decision-log
+    required: true
+  - id: executive-decision-brief
+    path: skills/executive-decision-brief
+    required: true
+  - id: investment-review
+    path: skills/investment-review
+    required: true
+  - id: risk-escalation
+    path: skills/risk-escalation
+    required: true
+  - id: strategic-opportunity-review
+    path: skills/strategic-opportunity-review
+    required: true
+  tools: []
+  plugins:
+  - id: agency-agents-router
+    path: plugins/agency-agents-router
+    required: false
+  policies:
+  - path: policies/tool-policy.yaml
+  - path: policies/data-policy.yaml
+connector_slots: []
+permissions:
+  tools:
+    default: deny
+    allow: []
+    deny:
+    - terminal
+    - write_file
+  network:
+    default: deny
+    connector_slots: []
+  data:
+    maximum_classification: confidential
+    export_allowed: false
+evaluations:
+  suite: evaluations/cases.yaml
+  minimum_score: 0.9
+  required_gates:
+  - schema
+  - security
+release:
+  publishable: true
+  approval:
+    business: required
+    security: required
+provenance:
+  source_repository: loudon84/copilot-docker
+  derived_from: null
+extensions:
+  team:
+    kind: hermes-profile-team
+    members:
+    - strategy-investment
+    - commercial-market-intelligence
+    - finance-board-governance
+    - operations-supply-risk
+    - technology-rd-ai
+    - strategy-red-team
+    - compliance-evidence
+    orchestration:
+      engine: kanban
+      board: ceo-strategic-office
+      dispatch_in_gateway: true
+      dispatch_interval_seconds: 30

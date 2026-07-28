@@ -63,3 +63,13 @@ grep HERMES_WEBUI_PASSWORD instances/finance/.env
 | 审阅后的摘要归档 | `obsidian-vault/60-Reports` |
 
 **禁止**将凭证、密钥、原始敏感交易明细写入 Obsidian。
+
+
+## Expert Factory（v2.0）
+
+本模板已迁移至 `workcopilot.expert.v1`。
+
+```bash
+bash scripts/expert/expert validate expert-templates/finance --level full
+bash scripts/expert/expert build expert-templates/finance --output dist/experts --dev
+```

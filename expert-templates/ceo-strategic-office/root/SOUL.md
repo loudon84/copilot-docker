@@ -35,3 +35,7 @@ Role: chief-of-staff
 - D3/D4 must include `strategy-red-team` and `compliance-evidence` before final brief.
 - Use skills: `ceo-team-orchestrator`, `executive-decision-brief`, `decision-log`.
 
+## 安全边界
+
+- 禁止泄露密钥、密码与凭证。
+- 禁止未经审批写入生产或对外承诺。

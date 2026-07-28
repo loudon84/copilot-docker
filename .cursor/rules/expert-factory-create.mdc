@@ -1,0 +1,79 @@
+---
+description: 专家 / 专家团队 / Skill 标准创建约束（workcopilot v1）
+globs: expert-templates/**/*,expert-factory/**/*
+alwaysApply: true
+---
+
+# Expert Factory 创建规则（强制）
+
+新建或大幅改写**业务专家**、**专家团队**、**Skill** 时，必须遵守 `workcopilot.*.v1` 协议。基础设施模板 `base/`、`default/` 除外。
+
+## 1. 单专家
+
+目录：`expert-templates/<expert-id>/`（`expert-id` 为 kebab-case，与 `metadata.id` 一致）
+
+必须包含：
+
+- `expert.yaml`（`schema_version: workcopilot.expert.v1`）
+- `SOUL.md`（或 Manifest `entrypoints.soul` 指向的路径）
+- `README.md`
+- 至少一个 Skill（`components.skills` 与目录一致）
+- `policies/`（与 `permissions` 对齐；工具默认 `deny`）
+- `evaluations/cases.yaml`（`workcopilot.evaluation-suite.v1`）
+
+推荐流程：
+
+```bash
+bash scripts/expert/expert create --brief <brief.yaml> --output expert-templates/<id>
+# Agent 按 expert-factory/skills/create-expert 补全正文后：
+bash scripts/expert/expert validate expert-templates/<id> --level structure
+```
+
+## 2. 专家团队
+
+在单专家要求基础上：
+
+- `runtime.mode: team`
+- `team.yaml` + `root/` + `profiles/`
+- 注入走 `inject-expert-team.sh`（或 `inject-expert.sh` 自动转调）
+
+## 3. Skill
+
+路径：`skills/<skill-id>/SKILL.md`（允许业务域中间目录，如 `skills/finance/<id>/`）
+
+- Frontmatter：`schema_version: workcopilot.skill.v1`
+- 一 Skill 一职责；禁止 Skill 循环依赖
+- 正文须含九章：技能目标 / 适用条件 / 前置检查 / 执行流程 / 工具调用规则 / 输出要求 / 异常处理 / 禁止事项 / 引用资料
+- 说明正文为**简体中文**；禁止控制字符 / 零宽字符（见 `expert-template-docs.mdc`）
+- 外部系统只通过专家 `connector_slots` 声明；Skill 不写生产 URL / Secret
+
+## 4. Connector 与安全
+
+- Expert Source / Bundle **禁止** API Key、密码、Token、私钥、生产工作空间 ID
+- 权限默认拒绝；写操作必须显式声明
+- 不直接修改 `instances/` 运行目录来“创建专家”
+
+## 5. 创建后校验（必做）
+
+```bash
+bash scripts/expert/expert validate expert-templates/<id> --level structure
+# 建议静态评测；发布前：
+bash scripts/expert/expert evaluate expert-templates/<id> --mode static
+bash scripts/expert/expert validate expert-templates/<id> --level full
+bash scripts/expert/expert evaluate expert-templates/<id> --mode full
+bash scripts/expert/expert build expert-templates/<id> --output dist/experts --release
+```
+
+定制派生：
+
+```bash
+bash scripts/expert/expert customize expert-templates/<source> --output expert-templates/<new-id> --notes "..."
+```
+
+禁止修改源专家目录。
+
+## 6. 文档分工
+
+- 模板详情 → `expert-templates/<id>/README.md`
+- 产品定位与 Factory 能力 → 根 `README.md`
+- 根 README 专家表**仅登记新增**路径 + 一句话（不写更新流水账）

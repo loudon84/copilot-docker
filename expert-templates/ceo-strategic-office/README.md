@@ -92,3 +92,14 @@ python -m pytest tests/test_team_manifest.py tests/test_patch_config_runtime.py 
 - 仅 root 首席幕僚面向 CEO（WebUI/Gateway）。
 - D3/D4 决策须经过 `strategy-red-team` 与 `compliance-evidence` 审阅。
 - 禁止执行保留动作（投资承诺、对外消息、合同、法律结论、人事决策、EBS 写入等）。
+
+
+## Expert Factory（v2.0）
+
+本团队模板已迁移至 `workcopilot.expert.v1`（`runtime.mode: team`）。
+
+```bash
+bash scripts/expert/expert validate expert-templates/ceo-strategic-office --level full
+bash scripts/expert/expert evaluate expert-templates/ceo-strategic-office --mode static
+bash scripts/inject-expert-team.sh <instance> ceo-strategic-office
+```

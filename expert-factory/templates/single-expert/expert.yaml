@@ -1,0 +1,57 @@
+schema_version: workcopilot.expert.v1
+kind: expert
+metadata:
+  id: __EXPERT_ID__
+  name: __EXPERT_NAME__
+  version: 1.0.0
+  description: __EXPERT_DESCRIPTION__
+  category: general
+  tags: []
+  language: zh-CN
+  owner: local
+runtime:
+  engine: hermes
+  mode: single
+  compatibility:
+    hermes: ">=0.18.2"
+    python: ">=3.11"
+  entrypoints:
+    soul: SOUL.md
+    agents: workspace/AGENTS.md
+components:
+  skills:
+    - id: example-skill
+      path: skills/example-skill
+      required: true
+  tools: []
+  plugins: []
+  policies:
+    - path: policies/tool-policy.yaml
+    - path: policies/data-policy.yaml
+connector_slots: []
+permissions:
+  tools:
+    default: deny
+    allow: []
+    deny:
+      - terminal
+  network:
+    default: deny
+    connector_slots: []
+  data:
+    maximum_classification: internal
+    export_allowed: false
+evaluations:
+  suite: evaluations/cases.yaml
+  minimum_score: 0.9
+  required_gates:
+    - schema
+    - security
+release:
+  publishable: true
+  approval:
+    business: required
+    security: required
+provenance:
+  source_repository: loudon84/copilot-docker
+  derived_from: null

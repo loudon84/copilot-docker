@@ -1,28 +1,74 @@
 ---
-name: ceo-team-orchestrator
+schema_version: workcopilot.skill.v1
+id: ceo-team-orchestrator
+name: 按决策等级 D0–D4 路由 CEO 请求，创建最小必要的 Kanban 顾问任
+version: 1.0.0
 description: 按决策等级 D0–D4 路由 CEO 请求，创建最小必要的 Kanban 顾问任务，并汇总保留异议的简报。
+triggers:
+- 按决策等级 D0–D4 路由 CEO 请求，创建最小必要的 Kanban 顾问任
+scope:
+  includes:
+  - 按决策等级 D0–D4 路由 CEO 请求，创建最小必要的 Kanban 顾问任务，并汇总保留异议的简报。
+  excludes:
+  - 写入生产系统
+  - 泄露密钥
+  - 执行非只读 SQL
+  - 修改 ERP
+inputs:
+  required: []
+  optional: []
+outputs:
+  format: structured-markdown
+tool_requirements: []
+connector_requirements: []
+permissions:
+  access_mode: read-only
+  data_classification: internal
 ---
 
-# ceo-team-orchestrator
+# 技能目标
 
-## 何时使用
+按决策等级 D0–D4 路由 CEO 请求，创建最小必要的 Kanban 顾问任务，并汇总保留异议的简报。
 
-CEO 战略办公室中需要常驻顾问或审阅门禁的请求。
+# 适用条件
 
-## 决策等级
+当用户请求与「按决策等级 D0–D4 路由 CEO 请求，创建最小必要的 Kanban 顾问任」相关的任务时使用本技能。
 
-| 等级 | 含义 | 最低路由 |
-|------|------|----------|
-| D0 | 信息检索 / 摘要 | root；可选动态专家 |
-| D1 | 可逆的运营建议 | root + 1 名常驻顾问 |
-| D2 | 跨职能 / 预算 / 组合 | root + 2+ 顾问；涉敏则加合规 |
-| D3 | 董事会 / 上市公司 / 重大投资 / 并购 / 监管 | 顾问 + strategy-red-team + compliance-evidence |
-| D4 | 法务 / 人事 / 披露 / 合同 / 对外承诺 | 仅分析；须人工决策 |
+# 前置检查
 
-禁止为绕过审阅门禁而降级请求。不确定时上调等级。
+- 确认任务目标与输入材料是否齐全。
+- 确认外部连接器可用（如已声明）。
+- 确认不需要写入外部生产系统。
 
-## 协作
+# 执行流程
+
+1. 澄清目标、范围与约束。
+2. 按工具调用规则获取只读数据或进行编排。
+3. 按输出要求交付，并标注不确定项。
+
+# 工具调用规则
+
+- 仅使用专家权限允许的工具：无强制工具。
+- 默认只读；不得越权调用。
+- 连接器不可用时停止猜测并说明限制。
+
+# 输出要求
 
 - 跨常驻 Profile 的工作**必须**使用 Hermes Kanban（禁止匿名 `delegate_task`）。
 - Agency Agents / `delegate_task` 仅用于短寿命临时任务。
 - 保留异议；禁止制造虚假共识。
+
+# 异常处理
+
+- 关键条件缺失时先追问，不臆造。
+- 连接器或数据源不可用时明确说明并给出可重试建议。
+
+# 禁止事项
+
+- 不写入生产系统 / ERP。
+- 不泄露密钥、凭证、Token、chat_id。
+- 不执行非只读 SQL，不绕过 Adapter 安全护栏。
+
+# 引用资料
+
+- 详见专家 SOUL、GUIDE 与工作区约定

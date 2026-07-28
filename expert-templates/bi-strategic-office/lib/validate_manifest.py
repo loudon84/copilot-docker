@@ -47,6 +47,7 @@ def validate_package(package_root: Path) -> int:
 
     required_files = [
         "expert.yaml",
+        "package.yaml",
         "VERSION",
         "runtime/SOUL.md",
         "runtime/memories/MEMORY.md",
@@ -88,6 +89,7 @@ def validate_package(package_root: Path) -> int:
 
     for rel in (
         "expert.yaml",
+        "package.yaml",
         "runtime/config.patch.yaml",
         "plugins/hermes-sqlbot-adapter/plugin.yaml",
     ):
@@ -112,22 +114,52 @@ def validate_package(package_root: Path) -> int:
             _fail(f"VERSION not semver-like: {ver!r}", errors)
 
     manifest_path = root / "expert.yaml"
+    package_path = root / "package.yaml"
     if manifest_path.is_file():
         try:
             manifest: Any = yaml.safe_load(manifest_path.read_text(encoding="utf-8")) or {}
-            expert = manifest.get("expert") if isinstance(manifest, dict) else None
-            if not isinstance(expert, dict) or expert.get("id") != "bi-strategic-office":
-                _fail("expert.yaml expert.id must be bi-strategic-office", errors)
-            else:
-                _ok("expert.id=bi-strategic-office")
-            plugins = manifest.get("plugins") if isinstance(manifest, dict) else None
-            if isinstance(plugins, list) and plugins:
-                if plugins[0].get("id") != "hermes-sqlbot-adapter":
-                    _fail("expert.yaml plugins[0].id must be hermes-sqlbot-adapter", errors)
+            if isinstance(manifest, dict) and manifest.get("schema_version") == "workcopilot.expert.v1":
+                meta = manifest.get("metadata") or {}
+                if meta.get("id") != "bi-strategic-office":
+                    _fail("expert.yaml metadata.id must be bi-strategic-office", errors)
                 else:
-                    _ok("plugin id=hermes-sqlbot-adapter")
+                    _ok("metadata.id=bi-strategic-office (v1)")
+                plugins = ((manifest.get("components") or {}).get("plugins")) or []
+                if isinstance(plugins, list) and plugins:
+                    if plugins[0].get("id") != "hermes-sqlbot-adapter":
+                        _fail("components.plugins[0].id must be hermes-sqlbot-adapter", errors)
+                    else:
+                        _ok("plugin id=hermes-sqlbot-adapter")
+                slots = manifest.get("connector_slots") or []
+                if not any(isinstance(s, dict) and s.get("id") == "finance-query" for s in slots):
+                    _fail("connector_slots must include finance-query", errors)
+                else:
+                    _ok("connector_slots.finance-query")
+            else:
+                expert = manifest.get("expert") if isinstance(manifest, dict) else None
+                if not isinstance(expert, dict) or expert.get("id") != "bi-strategic-office":
+                    _fail("expert.yaml must be workcopilot.expert.v1 or legacy expert.id", errors)
+                else:
+                    _ok("legacy expert.id=bi-strategic-office")
         except Exception as exc:
             _fail(f"expert.yaml read error: {exc}", errors)
+
+    if package_path.is_file():
+        try:
+            pkg: Any = yaml.safe_load(package_path.read_text(encoding="utf-8")) or {}
+            life = pkg.get("lifecycle") if isinstance(pkg, dict) else None
+            if not isinstance(life, dict) or not life.get("install"):
+                _fail("package.yaml missing lifecycle.install", errors)
+            else:
+                _ok("package.yaml lifecycle.install")
+            if (pkg.get("security") or {}).get("secrets_in_package") is not False:
+                _fail("package.yaml security.secrets_in_package must be false", errors)
+            else:
+                _ok("package secrets_in_package=false")
+        except Exception as exc:
+            _fail(f"package.yaml read error: {exc}", errors)
+    else:
+        _fail("missing package.yaml", errors)
 
     SCAN_PREFIXES = ("runtime/", "plugins/", "bin/", "lib/", "config/", "expert.yaml", "VERSION")
     SKIP_PREFIXES = (
@@ -156,6 +188,8 @@ def validate_package(package_root: Path) -> int:
                 continue
 
         if any(rel.startswith(p) or rel == p.rstrip("/") for p in SKIP_PREFIXES):
+            continue
+        if "/tests/" in f"/{rel}/" or rel.endswith("/tests"):
             continue
         if not any(rel.startswith(p) or rel == p.rstrip("/") for p in SCAN_PREFIXES):
             continue

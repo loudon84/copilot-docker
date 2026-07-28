@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workcopilot.local/schemas/connector-slot-v1.schema.json",
+  "title": "workcopilot.connector-slot.v1",
+  "type": "object",
+  "required": ["id", "name", "type", "category", "required", "access_mode"],
+  "additionalProperties": true,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{1,63}$"
+    },
+    "name": { "type": "string" },
+    "type": {
+      "enum": ["mcp", "http", "internal-tool"]
+    },
+    "category": { "type": "string" },
+    "required": { "type": "boolean" },
+    "access_mode": {
+      "enum": ["read-only", "read-write", "write"]
+    },
+    "capabilities": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "allowed_tools": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "auth": {
+      "type": "object",
+      "properties": {
+        "mode": { "type": "string" },
+        "required_fields": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "healthcheck": {
+      "type": "object",
+      "properties": {
+        "tool": { "type": "string" },
+        "timeout_seconds": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "data_classification": { "type": "string" }
+  }
+}

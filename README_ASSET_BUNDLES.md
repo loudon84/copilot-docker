@@ -2,6 +2,11 @@
 
 Asset Bundle 用于在多个 Hermes Agent WebUI 实例之间复用 skills、tools、plugins、mcp 配置和相关运行期能力。
 
+> **与 Expert Bundle 的边界（v2.0）**  
+> Asset Bundle = 实例间**运行资产**迁移（本文件）。  
+> Expert Bundle = 可注册、可审核的**专家产品发布包**（`scripts/expert/expert build` → `dist/experts/*.expert.bundle`）。  
+> 二者不合并。`promote-bundle-to-template.sh` 仍属 Legacy Runtime Asset Flow，发布前须补齐 `workcopilot.expert.v1` 并完整校验。
+
 典型流程：
 
 ```text

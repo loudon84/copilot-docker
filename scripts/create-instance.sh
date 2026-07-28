@@ -82,15 +82,21 @@ chown -R 1000:1000 "$DATA_DIR" 2>/dev/null || true
 chmod -R u+rwX,g+rwX "$DATA_DIR" 2>/dev/null || true
 chmod 600 "$INSTANCE_DIR/.env" 2>/dev/null || true
 
-# Expert package mode (PRD v1.10): expert.yaml + bin/install.sh → package installer.
-# Otherwise fall back to legacy inject-expert.sh. No expert-specific branches here.
+# Expert package mode (PRD v1.10 / v2.0): package.yaml (or legacy lifecycle in
+# expert.yaml) + bin/install.sh → package installer. Otherwise inject-expert.sh.
 EXPERT_DIR="$BASE_DIR/expert-templates/$EXPERT"
 EXPERT_MANIFEST="$EXPERT_DIR/expert.yaml"
+EXPERT_PACKAGE="$EXPERT_DIR/package.yaml"
 EXPERT_INSTALLER="$EXPERT_DIR/bin/install.sh"
-if [[ -f "$EXPERT_MANIFEST" && -x "$EXPERT_INSTALLER" ]]; then
-  PACKAGE_MODE=true
-else
-  PACKAGE_MODE=false
+PACKAGE_MODE=false
+if [[ -x "$EXPERT_INSTALLER" ]]; then
+  if [[ -f "$EXPERT_PACKAGE" ]]; then
+    PACKAGE_MODE=true
+  elif [[ -f "$EXPERT_MANIFEST" ]] && grep -qE '^lifecycle:' "$EXPERT_MANIFEST" 2>/dev/null; then
+    PACKAGE_MODE=true
+  elif [[ -f "$EXPERT_MANIFEST" ]] && grep -q 'schema_version: 1' "$EXPERT_MANIFEST" 2>/dev/null && grep -q 'install:' "$EXPERT_MANIFEST" 2>/dev/null; then
+    PACKAGE_MODE=true
+  fi
 fi
 
 if [[ "$PACKAGE_MODE" == "true" ]]; then

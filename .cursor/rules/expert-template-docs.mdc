@@ -13,7 +13,9 @@ alwaysApply: true
 | 文档 | 职责 |
 |------|------|
 | `expert-templates/<id>/README.md` | 该模板的完整说明：专家描述、能力边界、注入/校验/诊断脚本、运行时要点 |
-| 仓库根 `README.md` | **仅登记新增**专家/团队：路径 + 一句话简述；**不**记录后续更新 changelog |
+| 仓库根 `README.md` | **产品定位与 Factory 能力**写在根 README；专家索引表**仅登记新增**路径 + 一句话简述；**不**记录后续更新 changelog |
+
+协议与创建约束见 `.cursor/rules/expert-factory-create.mdc`（`workcopilot.expert.v1` / Skill / 团队）。
 
 ## 0. 正文语言与字符约束（强制）
 
@@ -57,10 +59,12 @@ alwaysApply: true
 校验命令（创建/更新专家后应通过）：
 
 ```bash
+bash scripts/expert/expert validate expert-templates/<template-id> --level full
+# 兼容入口：
 bash scripts/validate-expert-template.sh <template-id>
 ```
 
-`validate-expert-template.sh` 对业务模板（非 `base/`、`default/`）同时硬校验：控制/零宽字符 + 说明正文含简体中文。
+`validate-expert` / `validate-expert-template.sh` 对业务模板硬校验：v1 Manifest（若已迁移）、控制/零宽字符、说明正文含简体中文。
 
 ## 1. 新建模板 → 必须创建模板 README
 

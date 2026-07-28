@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "workcopilot-expert-factory"
+version = "2.0.0"
+description = "WorkCopilot Expert Factory: create, customize, validate, and build expert bundles"
+requires-python = ">=3.11"
+dependencies = [
+  "pydantic>=2.8",
+  "pyyaml>=6.0",
+  "jsonschema>=4.23",
+  "typer>=0.12",
+  "rich>=13.7",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+workcopilot-expert = "workcopilot_expert_factory.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+workcopilot_expert_factory = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

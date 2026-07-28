@@ -1,0 +1,19 @@
+# Connector Slot binding sample — NO secrets.
+# Slot id must match expert.yaml connector_slots[].id
+id: finance-query
+name: 财务查询连接
+type: mcp
+category: data-query
+# Map logical auth fields → instance env keys (values live in instances/<profile>/.env)
+env:
+  endpoint: SQLBOT_MCP_URL
+  username: SQLBOT_USERNAME
+  password: SQLBOT_PASSWORD
+  workspace_id: SQLBOT_WORKSPACE_ID
+  datasource_id: SQLBOT_DEFAULT_DATASOURCE_ID
+  session_key: SQLBOT_SESSION_ENCRYPTION_KEY
+# See also: ../config/sqlbot.example.env
+notes: |
+  由 nodeskclaw 或运维在实例 .env 中绑定真实值。
+  模板与 Expert Bundle 不得包含生产 Secret。
+  本地检查：bash scripts/expert/expert bind-check expert-templates/bi-strategic-office --env-file instances/<profile>/.env

@@ -1,0 +1,81 @@
+schema_version: workcopilot.expert.v1
+kind: expert
+metadata:
+  id: finance
+  name: 财务运营专家
+  version: 2.0.0
+  description: 账龄、回款、现金流与财务风险分析专家
+  category: finance
+  tags:
+  - finance
+  - risk
+  language: zh-CN
+  owner: copilot-docker
+runtime:
+  engine: hermes
+  mode: single
+  compatibility:
+    hermes: '>=0.18.2'
+    python: '>=3.11'
+  entrypoints:
+    soul: SOUL.md
+    agents: workspace/AGENTS.md
+components:
+  skills:
+  - id: ap-pressure-review
+    path: skills/finance/ap-pressure-review
+    required: true
+  - id: ar-aging-review
+    path: skills/finance/ar-aging-review
+    required: true
+  - id: bank-reconciliation-review
+    path: skills/finance/bank-reconciliation-review
+    required: true
+  - id: cashflow-forecast
+    path: skills/finance/cashflow-forecast
+    required: true
+  - id: finance-policy-qa
+    path: skills/finance/finance-policy-qa
+    required: true
+  - id: finance-report-daily
+    path: skills/finance/finance-report-daily
+    required: true
+  - id: finance-risk-check
+    path: skills/finance/finance-risk-check
+    required: true
+  - id: variance-analysis
+    path: skills/finance/variance-analysis
+    required: true
+  tools: []
+  plugins: []
+  policies:
+  - path: policies/tool-policy.yaml
+  - path: policies/data-policy.yaml
+connector_slots: []
+permissions:
+  tools:
+    default: deny
+    allow: []
+    deny:
+    - terminal
+    - write_file
+  network:
+    default: deny
+    connector_slots: []
+  data:
+    maximum_classification: internal
+    export_allowed: false
+evaluations:
+  suite: evaluations/cases.yaml
+  minimum_score: 0.9
+  required_gates:
+  - schema
+  - security
+release:
+  publishable: true
+  approval:
+    business: required
+    security: required
+provenance:
+  source_repository: loudon84/copilot-docker
+  derived_from: null

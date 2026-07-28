@@ -1,28 +1,81 @@
 ---
-name: sqlbot-query-review
-description: 复核 SQLBot 生成的 SQL、筛选条件与结果范围，发现偏差时停止分析。
+schema_version: workcopilot.skill.v1
+id: sqlbot-query-review
+name: 复核 SQLBot 生成的 SQL、筛选条件与结果范围，发现偏差时停止分析
 version: 1.0.0
-metadata:
-  hermes:
-    tags: [bi, sqlbot, review]
-    category: finance-bi
+description: 复核 SQLBot 生成的 SQL、筛选条件与结果范围，发现偏差时停止分析。
+triggers:
+- 复核 SQLBot 生成的 SQL、筛选条件与结果范围，发现偏差时停止分析。
+scope:
+  includes:
+  - 复核 SQLBot 生成的 SQL、筛选条件与结果范围，发现偏差时停止分析。
+  excludes:
+  - 写入生产系统
+  - 泄露密钥
+  - 执行非只读 SQL
+  - 修改 ERP
+inputs:
+  required: []
+  optional: []
+outputs:
+  format: structured-markdown
+tool_requirements:
+- finance_bi_ask
+- finance_bi_followup
+- finance_bi_explain
+- finance_bi_reset
+- finance_bi_connection_test
+connector_requirements:
+- finance-query
+permissions:
+  access_mode: read-only
+  data_classification: confidential
 ---
 
-# sqlbot-query-review
+# 技能目标
 
-## 职责
+复核 SQLBot 生成的 SQL、筛选条件与结果范围，发现偏差时停止分析。
 
-在经营分析或正式报告前，复核最近一次 `finance_bi_*` 返回：
+# 适用条件
 
-1. SQL 是否只读（SELECT / WITH）。
-2. 用户明确编号/过滤是否出现在 SQL 与结果中。
-3. 时间范围、主体、客户是否符合问题意图。
-4. 结果是否混入无关凭证或全局前 N 行。
-5. `warnings` 与截断信息是否已向用户说明。
+当用户请求与「复核 SQLBot 生成的 SQL、筛选条件与结果范围，发现偏差时停止分析」相关的任务时使用本技能。
 
-## 动作
+# 前置检查
+
+- 确认任务目标与输入材料是否齐全。
+- 确认外部连接器可用（如已声明）。
+- 确认不需要写入外部生产系统。
+
+# 执行流程
+
+1. 澄清目标、范围与约束。
+2. 按工具调用规则获取只读数据或进行编排。
+3. 按输出要求交付，并标注不确定项。
+
+# 工具调用规则
+
+- 仅使用专家权限允许的工具：finance_bi_ask, finance_bi_followup, finance_bi_explain, finance_bi_reset, finance_bi_connection_test。
+- 默认只读；不得越权调用。
+- 连接器不可用时停止猜测并说明限制。
+
+# 输出要求
 
 - 需要 SQL/口径细节时调用 `finance_bi_explain`（不重新查库）。
 - 发现问题：停止分析，原样引用工具 `error.code` / `warnings`，请用户澄清或改问。
 - 不得绕过 Adapter 安全错误再次取数。
 - 不得修改 `rows` 中的原始数字。
+
+# 异常处理
+
+- 关键条件缺失时先追问，不臆造。
+- 连接器或数据源不可用时明确说明并给出可重试建议。
+
+# 禁止事项
+
+- 不写入生产系统 / ERP。
+- 不泄露密钥、凭证、Token、chat_id。
+- 不执行非只读 SQL，不绕过 Adapter 安全护栏。
+
+# 引用资料
+
+- 详见专家 SOUL、GUIDE 与工作区约定

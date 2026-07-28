@@ -66,3 +66,16 @@ bash expert-templates/bi-strategic-office/bin/doctor.sh --profile <profile> --de
 ```
 
 `install.sh` 会创建 `sqlbot-adapter/state|audit`、初始化 SQLite schema v3（可从 v2 幂等迁移），并写 `package-state.yaml`。
+
+
+## Expert Factory（v2.0）
+
+- Manifest：`workcopilot.expert.v1`（本目录 `expert.yaml`）
+- 包生命周期：`package.yaml` + `bin/*.sh`（create-instance 仍走 package 安装）
+- SQLBot 仅通过 Connector Slot `finance-query` 声明；生产 Secret 由 nodeskclaw / 实例 `.env` 绑定
+
+```bash
+bash scripts/expert/expert validate expert-templates/bi-strategic-office --level full
+bash scripts/expert/expert evaluate expert-templates/bi-strategic-office --mode static
+bash scripts/expert/expert build expert-templates/bi-strategic-office --output dist/experts --dev
+```

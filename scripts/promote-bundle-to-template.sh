@@ -31,3 +31,6 @@ done
 
 echo "OK: promoted bundle '$BUNDLE' to expert template '$EXPERT'"
 echo "Backup: $BACKUP_DIR"
+echo "NOTE: 该流程属于 Legacy Runtime Asset Flow。"
+echo "      生成可发布专家前必须补充 workcopilot.expert.v1 expert.yaml 并执行完整校验："
+echo "      bash scripts/expert/expert validate expert-templates/$EXPERT --level full"

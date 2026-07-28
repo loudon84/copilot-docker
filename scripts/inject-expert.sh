@@ -8,6 +8,19 @@ TPL_BASE="$BASE_DIR/expert-templates/base"
 TPL_EXPERT="$BASE_DIR/expert-templates/$EXPERT"
 [ -d "$TPL_EXPERT" ] || { echo "Expert template not found: $EXPERT"; exit 1; }
 
+# Expert Factory v2: structure validation before inject
+if [ -f "$BASE_DIR/scripts/expert/expert" ]; then
+  if ! bash "$BASE_DIR/scripts/expert/expert" validate "$TPL_EXPERT" --level structure --format text; then
+    echo "ERROR: expert structure validation failed for $EXPERT"
+    exit 1
+  fi
+  if [ -f "$TPL_EXPERT/expert.yaml" ] && grep -q 'workcopilot.expert.v1' "$TPL_EXPERT/expert.yaml" 2>/dev/null; then
+    echo "[expert-factory] using workcopilot.expert.v1 manifest for $EXPERT"
+  else
+    echo "[expert-factory] WARN: legacy expert template (no workcopilot.expert.v1); continuing inject"
+  fi
+fi
+
 # Team expert pack: delegate to inject-expert-team.sh (PRD v1.8)
 if [ -f "$TPL_EXPERT/team.yaml" ]; then
   exec bash "$BASE_DIR/scripts/inject-expert-team.sh" "$PROFILE" "$EXPERT"
@@ -40,7 +53,29 @@ for d in skills tools plugins mcp policies skill-bundles gbrain; do
 done
 
 cp -R "$TPL_BASE/." "$DATA_DIR/"
-cp -R "$TPL_EXPERT/." "$DATA_DIR/"
+
+USE_MANIFEST_INJECT=0
+if [ -f "$TPL_EXPERT/expert.yaml" ] && grep -q 'workcopilot.expert.v1' "$TPL_EXPERT/expert.yaml" 2>/dev/null; then
+  USE_MANIFEST_INJECT=1
+fi
+
+PYTHON_BIN="$(command -v python3 || command -v python || true)"
+if [ "$USE_MANIFEST_INJECT" = "1" ] && [ -n "$PYTHON_BIN" ]; then
+  echo "[expert-factory] precise inject from workcopilot.expert.v1 manifest"
+  # base already copied; inject only declares overlay assets (pass empty base to avoid double)
+  "$PYTHON_BIN" "$BASE_DIR/scripts/lib/inject_from_manifest.py" \
+    --template "$TPL_EXPERT" \
+    --data-dir "$DATA_DIR" \
+    || { echo "ERROR: manifest inject failed"; exit 1; }
+  # Re-apply base was done above; inject_from_manifest without --base only overlays expert assets.
+  # But we need base first then overlay — call again is wrong if inject includes base.
+  # Current inject_from_manifest without --base only copies expert assets; good.
+else
+  if [ "$USE_MANIFEST_INJECT" = "1" ]; then
+    echo "[expert-factory] WARN: python missing; falling back to full template copy"
+  fi
+  cp -R "$TPL_EXPERT/." "$DATA_DIR/"
+fi
 
 if [ "$PRESERVE_FULL_CONFIG" = "1" ]; then
   cp "$DATA_DIR/.backup/$TS/config.yaml" "$DATA_DIR/config.yaml"
@@ -72,85 +107,51 @@ fi
 source "$BASE_DIR/scripts/lib/init_hermes_dirs.sh"
 init_hermes_dirs "$DATA_DIR"
 
-# BI strategic office: semantic catalog, plugin, env placeholders (PRD v1.9)
+# BI strategic office: semantic catalog + legacy plugin warn (v1.9); v2 prefers sqlbot adapter via manifest
 if [ "$EXPERT" = "bi-strategic-office" ] || [ -d "$TPL_EXPERT/semantic" ]; then
-  bash "$BASE_DIR/scripts/sync-bi-semantic-catalog.sh" "$PROFILE" "$EXPERT"
-  PLUGIN_SRC="$BASE_DIR/asset-bundles/hermes-finance-bi-plugin"
-  PLUGIN_DST="$DATA_DIR/plugins/hermes-finance-bi-plugin"
-  if [ -d "$PLUGIN_SRC" ] && [ -f "$PLUGIN_SRC/plugin.yaml" ]; then
-    mkdir -p "$PLUGIN_DST"
-    # copy plugin source (exclude tests noise optional)
-    cp -R "$PLUGIN_SRC/." "$PLUGIN_DST/"
-    rm -rf "$PLUGIN_DST/tests" 2>/dev/null || true
-    echo "[bi] installed plugin -> $PLUGIN_DST"
-  else
-    echo "[bi] WARN: plugin bundle missing: $PLUGIN_SRC"
+  if [ -d "$TPL_EXPERT/semantic" ]; then
+    bash "$BASE_DIR/scripts/sync-bi-semantic-catalog.sh" "$PROFILE" "$EXPERT" || true
   fi
-
-  # Hermes plugins are opt-in: must appear in config.yaml plugins.enabled
-  PYTHON_BIN="$(command -v python3 || command -v python || true)"
-  if [ -n "$PYTHON_BIN" ] && [ -f "$DATA_DIR/config.yaml" ]; then
-    "$PYTHON_BIN" "$BASE_DIR/scripts/lib/enable_finance_bi_plugin.py" \
-      --config "$DATA_DIR/config.yaml" \
-      --plugin hermes-finance-bi-plugin \
-      --toolset finance-bi || echo "[bi] WARN: failed to enable plugin in config.yaml"
+  if [ -d "$DATA_DIR/plugins/hermes-sqlbot-adapter" ]; then
+    echo "[bi] sqlbot adapter present via manifest inject"
+    PYTHON_BIN="$(command -v python3 || command -v python || true)"
+    if [ -n "$PYTHON_BIN" ] && [ -f "$DATA_DIR/config.yaml" ]; then
+      "$PYTHON_BIN" "$BASE_DIR/scripts/lib/enable_finance_bi_plugin.py" \
+        --config "$DATA_DIR/config.yaml" \
+        --plugin hermes-sqlbot-adapter \
+        --toolset finance-bi 2>/dev/null \
+        || echo "[bi] WARN: could not enable hermes-sqlbot-adapter in config.yaml"
+    fi
+    mkdir -p \
+      "$DATA_DIR/sqlbot-adapter/state" \
+      "$DATA_DIR/sqlbot-adapter/audit" \
+      "$DATA_DIR/workspace/exports/bi" \
+      "$DATA_DIR/workspace/uploads"
   else
-    echo "[bi] WARN: could not enable plugin in config (missing python or config.yaml)"
+    PLUGIN_SRC="$BASE_DIR/asset-bundles/hermes-finance-bi-plugin"
+    PLUGIN_DST="$DATA_DIR/plugins/hermes-finance-bi-plugin"
+    if [ -d "$PLUGIN_SRC" ] && [ -f "$PLUGIN_SRC/plugin.yaml" ]; then
+      mkdir -p "$PLUGIN_DST"
+      cp -R "$PLUGIN_SRC/." "$PLUGIN_DST/"
+      rm -rf "$PLUGIN_DST/tests" 2>/dev/null || true
+      echo "[bi] WARN: installed legacy hermes-finance-bi-plugin (prefer hermes-sqlbot-adapter)"
+    else
+      echo "[bi] WARN: neither sqlbot adapter nor legacy finance-bi plugin found"
+    fi
   fi
-  mkdir -p \
-    "$DATA_DIR/finance-bi/state" \
-    "$DATA_DIR/workspace/exports/bi" \
-    "$DATA_DIR/workspace/drafts/bi" \
-    "$DATA_DIR/workspace/reports/bi"
+fi
 
+# Connector slot bind-check (warn only)
+if [ -f "$TPL_EXPERT/expert.yaml" ] && grep -q 'connector_slots:' "$TPL_EXPERT/expert.yaml" 2>/dev/null; then
   INSTANCE_ENV="$BASE_DIR/instances/$PROFILE/.env"
-  if [ -f "$INSTANCE_ENV" ]; then
-    ensure_env() {
-      local key="$1"
-      local val="$2"
-      if ! grep -qE "^${key}=" "$INSTANCE_ENV" 2>/dev/null; then
-        printf '%s=%s\n' "$key" "$val" >> "$INSTANCE_ENV"
-      fi
-    }
-    upsert_env() {
-      local key="$1"
-      local val="$2"
-      if grep -qE "^${key}=" "$INSTANCE_ENV" 2>/dev/null; then
-        sed -i.bak -E "s|^${key}=.*|${key}=${val}|" "$INSTANCE_ENV" && rm -f "${INSTANCE_ENV}.bak"
-      else
-        printf '%s=%s\n' "$key" "$val" >> "$INSTANCE_ENV"
-      fi
-    }
-    ensure_env "FINANCE_BI_DSN" ""
-    ensure_env "FINANCE_BI_DIALECT" "mssql"
-    ensure_env "FINANCE_BI_TDS_VERSION" "7.0"
-    # 中文库默认 CP936，避免客户名乱码；已有错误 utf8 也覆盖
-    upsert_env "FINANCE_BI_CHARSET" "cp936"
-    ensure_env "FINANCE_BI_CATALOG_PATH" "/data/hermes/finance-bi/semantic"
-    ensure_env "FINANCE_BI_POLICY_PATH" "/data/hermes/finance-bi/policies"
-    ensure_env "FINANCE_BI_ALLOWED_SCHEMAS" "dbo,bi_finance,bi_sales"
-    ensure_env "FINANCE_BI_ALLOWED_ENTITIES" ""
-    # 空=不按 OU 裁剪。若需限制主体，填真实 ou_code，如 101,104（不是 HK01）
-    ensure_env "FINANCE_BI_DEFAULT_CURRENCY" "HKD"
-    ensure_env "FINANCE_BI_TIMEZONE" "Asia/Hong_Kong"
-    ensure_env "FINANCE_BI_QUERY_TIMEOUT_SECONDS" "30"
-    ensure_env "FINANCE_BI_DEFAULT_LIMIT" "200"
-    ensure_env "FINANCE_BI_HARD_LIMIT" "5000"
-    ensure_env "FINANCE_BI_STATE_DB" "/data/hermes/finance-bi/state/finance_bi.db"
-    ensure_env "FINANCE_BI_EXPORT_DIR" "/data/hermes/workspace/exports/bi"
-    # 问数专家强制明文：已有 true 也覆盖为 false（禁止默认保密掩码）
-    upsert_env "FINANCE_BI_MASK_SENSITIVE" "false"
-    ensure_env "FINANCE_BI_REVEAL_FILTERED_SENSITIVE" "true"
-  fi
-
-  CONTAINER="hermes-$PROFILE"
-  if docker inspect "$CONTAINER" >/dev/null 2>&1; then
-    if [ -f "$PLUGIN_DST/requirements.txt" ]; then
-      docker cp "$PLUGIN_DST/requirements.txt" "$CONTAINER:/tmp/hermes-finance-bi-requirements.txt"
-      docker exec -u root "$CONTAINER" bash -lc '
-        /app/venv/bin/python -m pip install -r /tmp/hermes-finance-bi-requirements.txt
-        chown -R 1000:1000 /app/venv
-      ' || echo "[bi] WARN: pip install finance-bi requirements failed"
+  if [ -f "$BASE_DIR/scripts/expert/expert" ]; then
+    if [ -f "$INSTANCE_ENV" ]; then
+      bash "$BASE_DIR/scripts/expert/expert" bind-check "$TPL_EXPERT" \
+        --env-file "$INSTANCE_ENV" --format text \
+        || echo "[expert-factory] WARN: connector bind-check reported missing env keys"
+    else
+      bash "$BASE_DIR/scripts/expert/expert" bind-check "$TPL_EXPERT" --format text \
+        || true
     fi
   fi
 fi

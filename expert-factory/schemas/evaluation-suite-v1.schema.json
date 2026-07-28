@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workcopilot.local/schemas/evaluation-suite-v1.schema.json",
+  "title": "workcopilot.evaluation-suite.v1",
+  "type": "object",
+  "required": ["schema_version", "expert_id", "cases"],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": {
+      "const": "workcopilot.evaluation-suite.v1"
+    },
+    "expert_id": { "type": "string" },
+    "defaults": {
+      "type": "object",
+      "properties": {
+        "timeout_seconds": { "type": "integer", "minimum": 1 },
+        "max_tool_calls": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "prompt"],
+        "properties": {
+          "id": { "type": "string" },
+          "type": {
+            "enum": ["task", "policy", "resilience", "security", "smoke"]
+          },
+          "prompt": { "type": "string" },
+          "expected": { "type": "object" },
+          "fixture": { "type": "object" }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,7 @@
+allow:
+- finance_bi_ask
+- finance_bi_followup
+- finance_bi_explain
+- finance_bi_reset
+- finance_bi_connection_test
+default: deny

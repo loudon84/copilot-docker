@@ -1,0 +1,44 @@
+schema_version: 1
+expert:
+  id: bi-strategic-office
+  name: 财务经营分析办公室
+  version: 2.0.0
+  type: expert
+  description: 财务分析、SQLBot 智能问数和经营分析专家
+compatibility:
+  python: '>=3.11'
+runtime:
+  soul: runtime/SOUL.md
+  memory: runtime/memories/MEMORY.md
+  config_patch: runtime/config.patch.yaml
+assets:
+  skills:
+    source: runtime/skills
+    target: skills
+plugins:
+- id: hermes-sqlbot-adapter
+  source: plugins/hermes-sqlbot-adapter
+  target: plugins/hermes-sqlbot-adapter
+lifecycle:
+  install: bin/install.sh
+  post_start: bin/post-start.sh
+  update: bin/update.sh
+  validate: bin/validate.sh
+  doctor: bin/doctor.sh
+  test: bin/test.sh
+runtime_directories:
+- sqlbot-adapter/state
+- sqlbot-adapter/audit
+- workspace/exports/bi
+- workspace/uploads
+required_env:
+- SQLBOT_MCP_URL
+- SQLBOT_USERNAME
+- SQLBOT_PASSWORD
+- SQLBOT_WORKSPACE_ID
+- SQLBOT_DEFAULT_DATASOURCE_ID
+- SQLBOT_SESSION_ENCRYPTION_KEY
+security:
+  allow_raw_sql: false
+  require_read_only_database: true
+  secrets_in_package: false

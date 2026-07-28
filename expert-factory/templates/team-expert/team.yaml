@@ -1,0 +1,8 @@
+kind: hermes-profile-team
+version: 1
+id: __EXPERT_ID__
+root:
+  profile: root
+members:
+  - id: member-a
+    role: specialist

@@ -1,30 +1,55 @@
 ---
-name: sales-technical-discovery
-description: 售前技术问题、产品规格确认、Demo 计划、POC 范围、技术异议处理。替代料需 FAE/工程确认。
+schema_version: workcopilot.skill.v1
+id: sales-technical-discovery
+name: 售前技术问题、产品规格确认、Demo 计划、POC 范围、技术异议处理。替代料需
 version: 1.0.0
-metadata:
-  hermes:
-    tags: [sale, pre-sales, demo, poc, technical, obsidian, hindsight]
-    category: sales
+description: 售前技术问题、产品规格确认、Demo 计划、POC 范围、技术异议处理。替代料需 FAE/工程确认。
+triggers:
+- 售前技术问题、产品规格确认、Demo 计划、POC 范围、技术异议处理。替代料需
+scope:
+  includes:
+  - 售前技术问题、产品规格确认、Demo 计划、POC 范围、技术异议处理。替代料需 FAE/工程确认。
+  excludes:
+  - 写入生产系统
+  - 泄露密钥
+  - 输出未标注的编造事实
+inputs:
+  required: []
+  optional: []
+outputs:
+  format: structured-markdown
+tool_requirements: []
+connector_requirements: []
+permissions:
+  access_mode: read-only
+  data_classification: internal
 ---
 
-# sales-technical-discovery
+# 技能目标
 
-## 使用时机
+售前技术问题、产品规格确认、Demo 计划、POC 范围、技术异议处理。替代料需 FAE/工程确认。
 
-用户要求售前技术问题、产品规格确认、Demo 计划、POC 范围、技术异议处理、BOM/RFQ 技术澄清。
+# 适用条件
 
-## 输出结构
+当用户请求与「售前技术问题、产品规格确认、Demo 计划、POC 范围、技术异议处理。替代料需」相关的任务时使用本技能。
 
-1. 技术环境与约束问题清单。
-2. 需求与限制（应用、封装、温度、供电、接口、认证、用量、交期）。
-3. Demo narrative（演示目标、场景、成功标准）。
-4. POC scope 与 pass/fail criteria。
-5. 技术风险与竞品技术定位。
-6. 需要 FAE / 产品 / 采购 / 工程确认的问题清单。
-7. Fact-Impact-Act 式技术异议回应草稿。
+# 前置检查
 
-## 输出约束
+- 确认任务目标与输入材料是否齐全。
+- 确认不需要写入外部生产系统。
+
+# 执行流程
+
+1. 澄清目标、受众与约束。
+2. 基于可用上下文完成分析或写作。
+3. 按输出要求交付，并标注不确定项。
+
+# 工具调用规则
+
+- 仅使用专家权限允许的工具。
+- 默认只读；不得越权调用。
+
+# 输出要求
 
 - 技术回答必须可追溯到规格书、产品资料或已知事实。
 - 替代料建议必须标记为「需 FAE/工程确认」，不直接确认等价性。
@@ -33,3 +58,18 @@ metadata:
 - 参数不全时先输出澄清清单，不直接推荐具体型号。
 - 输出保存：`/data/hermes/workspace/reports/sale/technical/` 或 `/data/hermes/workspace/drafts/sale/`。
 - 审核后的技术 battlecard 写入 Obsidian `80-Product-Spec` 或 `60-Reports/Sales`。
+
+# 异常处理
+
+- 关键条件缺失时先追问，不臆造。
+- 外部数据不可用时明确说明限制。
+
+# 禁止事项
+
+- 不写入生产系统。
+- 不泄露密钥、凭证或未授权数据。
+- 不编造未标注的事实与来源。
+
+# 引用资料
+
+- 无额外引用（详见专家 SOUL 与工作区约定）

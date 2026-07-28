@@ -58,3 +58,13 @@ grep HERMES_WEBUI_PASSWORD instances/sale/.env
 - 库存、价格、交期、信用条款、法律条款须从授权系统或人员确认，不可臆造。
 - 敏感客户信息保留在 `/data/hermes` 内。
 - 文档路由遵循 `policies/document-routing.yaml` 与 `workspace/AGENTS.md`。
+
+
+## Expert Factory（v2.0）
+
+本模板已迁移至 `workcopilot.expert.v1`。
+
+```bash
+bash scripts/expert/expert validate expert-templates/sale --level full
+bash scripts/expert/expert build expert-templates/sale --output dist/experts --dev
+```

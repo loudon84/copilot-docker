@@ -1,0 +1,72 @@
+name: expert-factory
+
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - "expert-factory/**"
+      - "expert-templates/**"
+      - "scripts/expert/**"
+      - "scripts/inject-expert.sh"
+      - "scripts/lib/inject_from_manifest.py"
+      - ".github/workflows/expert-factory.yml"
+  pull_request:
+    paths:
+      - "expert-factory/**"
+      - "expert-templates/**"
+      - "scripts/expert/**"
+      - "scripts/inject-expert.sh"
+      - "scripts/lib/inject_from_manifest.py"
+      - ".github/workflows/expert-factory.yml"
+
+jobs:
+  validate-and-evaluate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Expert Factory
+        run: pip install -e "expert-factory/[dev]"
+      - name: Validate all v1 experts
+        run: python -m workcopilot_expert_factory.cli validate --all --level full --format text
+      - name: Static evaluate all v1 experts
+        run: python -m workcopilot_expert_factory.cli evaluate --all --mode static --format text
+      - name: Changed experts (informational)
+        continue-on-error: true
+        env:
+          GITHUB_BASE_REF: ${{ github.base_ref || 'master' }}
+        run: |
+          python -m workcopilot_expert_factory.cli validate --changed --level full --format text || true
+          python -m workcopilot_expert_factory.cli evaluate --changed --mode static --format text || true
+      - name: Unit tests
+        working-directory: expert-factory
+        run: python -m pytest tests -q
+
+  build-dev-artifacts:
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
+    needs: validate-and-evaluate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Expert Factory
+        run: pip install -e "expert-factory/[dev]"
+      - name: Evaluate + build dev bundles
+        run: |
+          python -m workcopilot_expert_factory.cli evaluate --all --mode static --format text
+          python -m workcopilot_expert_factory.cli build --all --dev --output dist/experts
+      - name: Upload Expert Bundle artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: expert-bundles-dev
+          path: |
+            dist/experts/*.expert.bundle
+            dist/experts/*.sha256
+            dist/experts/*.build.json
+          if-no-files-found: error
