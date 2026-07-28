@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workcopilot.local/schemas/expert-branch-v1.schema.json",
+  "title": "workcopilot.expert-branch.v1",
+  "type": "object",
+  "required": ["schema_version", "metadata", "source", "target", "state"],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": { "const": "workcopilot.expert-branch.v1" },
+    "metadata": {
+      "type": "object",
+      "required": ["branch_id"],
+      "properties": {
+        "branch_id": { "type": "string", "minLength": 1 },
+        "created_at": { "type": "string" },
+        "created_by": { "type": "string" }
+      }
+    },
+    "source": {
+      "type": "object",
+      "required": ["expert_id", "version", "source_digest"],
+      "properties": {
+        "expert_id": { "type": "string" },
+        "version": { "type": "string" },
+        "source_digest": { "type": "string" }
+      }
+    },
+    "target": {
+      "type": "object",
+      "required": ["expert_id", "version"],
+      "properties": {
+        "expert_id": { "type": "string" },
+        "version": { "type": "string" }
+      }
+    },
+    "state": {
+      "type": "object",
+      "required": ["sync_state", "base_digest", "head_digest"],
+      "properties": {
+        "sync_state": {
+          "enum": ["synced", "behind", "diverged", "conflicted", "materialized"]
+        },
+        "base_digest": { "type": "string" },
+        "head_digest": { "type": "string" }
+      }
+    },
+    "overlay": {
+      "type": "object",
+      "properties": {
+        "files": { "type": "array", "items": { "type": "string" } },
+        "deleted_files": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "permissions": {
+      "type": "object",
+      "properties": {
+        "allow_expansion": { "type": "boolean" }
+      }
+    }
+  }
+}

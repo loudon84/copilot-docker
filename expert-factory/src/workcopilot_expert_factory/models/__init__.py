@@ -105,8 +105,15 @@ class ReleaseApproval(BaseModel):
     security: str = "required"
 
 
+class ReleaseRegistry(BaseModel):
+    provider: str = "nacos"
+    visibility: Literal["PRIVATE", "PUBLIC"] = "PRIVATE"
+    labels: dict[str, str] = Field(default_factory=dict)
+
+
 class ReleaseSpec(BaseModel):
     publishable: bool = True
+    registry: ReleaseRegistry | None = None
     approval: ReleaseApproval = Field(default_factory=ReleaseApproval)
 
 
@@ -115,9 +122,17 @@ class DerivedFrom(BaseModel):
     version: str
 
 
+class ProvenanceBranch(BaseModel):
+    branch_id: str | None = None
+    base_version: str | None = None
+    base_digest: str | None = None
+
+
 class ProvenanceSpec(BaseModel):
     source_repository: str | None = None
+    source_digest: str | None = None
     derived_from: DerivedFrom | None = None
+    branch: ProvenanceBranch | None = None
 
 
 class ExpertManifest(BaseModel):
@@ -134,6 +149,9 @@ class ExpertManifest(BaseModel):
 
     def to_yaml_dict(self) -> dict[str, Any]:
         return self.model_dump(mode="python", exclude_none=True)
+
+
+SkillKind = Literal["procedural", "general", "tool", "connector", "policy"]
 
 
 class SkillScope(BaseModel):
@@ -162,6 +180,7 @@ class SkillFrontmatter(BaseModel):
     name: str
     version: str
     description: str
+    kind: SkillKind | None = None
     triggers: list[str] = Field(default_factory=list)
     scope: SkillScope = Field(default_factory=SkillScope)
     inputs: SkillInputs = Field(default_factory=SkillInputs)
@@ -179,8 +198,115 @@ class BundleManifest(BaseModel):
     expert_version: str
     bundle_format: Literal["zip"] = "zip"
     payload_digest: str
+    source_digest: str | None = None
     source_commit: str | None = None
-    source_path: str
-    build_tool_version: str = "2.0.0"
-    runtime: dict[str, str] = Field(default_factory=dict)
+    source_path: str | None = None
+    build_tool_version: str = "2.1.0"
+    runtime: dict[str, Any] = Field(default_factory=dict)
+    evaluation_digest: str | None = None
+    signature_mode: str = "none"
     dev: bool = False
+
+
+SyncState = Literal["synced", "behind", "diverged", "conflicted", "materialized"]
+
+
+class BranchSource(BaseModel):
+    expert_id: str
+    version: str
+    source_digest: str
+
+
+class BranchTarget(BaseModel):
+    expert_id: str
+    version: str = "1.0.0"
+
+
+class BranchState(BaseModel):
+    sync_state: SyncState = "synced"
+    base_digest: str
+    head_digest: str
+
+
+class BranchOverlay(BaseModel):
+    files: list[str] = Field(default_factory=list)
+    deleted_files: list[str] = Field(default_factory=list)
+
+
+class BranchPermissions(BaseModel):
+    allow_expansion: bool = False
+
+
+class BranchManifest(BaseModel):
+    schema_version: Literal["workcopilot.expert-branch.v1"] = "workcopilot.expert-branch.v1"
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    source: BranchSource
+    target: BranchTarget
+    state: BranchState
+    overlay: BranchOverlay = Field(default_factory=BranchOverlay)
+    permissions: BranchPermissions = Field(default_factory=BranchPermissions)
+
+    def to_yaml_dict(self) -> dict[str, Any]:
+        return self.model_dump(mode="python", exclude_none=True)
+
+
+class EvaluationSource(BaseModel):
+    expert_id: str
+    expert_version: str
+    source_digest: str
+    git_commit: str | None = None
+    branch_id: str | None = None
+
+
+class EvaluationRuntimeInfo(BaseModel):
+    engine: str = "hermes"
+    hermes_version: str | None = None
+    model: str | None = None
+    connector_fixture_set: str | None = None
+
+
+class EvaluationCost(BaseModel):
+    input_tokens: int = 0
+    output_tokens: int = 0
+    tool_calls: int = 0
+    duration_ms: int = 0
+
+
+class EvaluationDecision(BaseModel):
+    passed: bool
+    score: float
+    gate_failures: list[str] = Field(default_factory=list)
+
+
+class EvaluationReportV2(BaseModel):
+    schema_version: Literal["workcopilot.evaluation-report.v2"] = "workcopilot.evaluation-report.v2"
+    source: EvaluationSource
+    runtime: EvaluationRuntimeInfo = Field(default_factory=EvaluationRuntimeInfo)
+    results: dict[str, Any] = Field(default_factory=dict)
+    cost: EvaluationCost = Field(default_factory=EvaluationCost)
+    decision: EvaluationDecision
+    factory_version: str = "2.1.0"
+    fixture_digest: str | None = None
+    generated_at: str | None = None
+
+
+class PublishSkillRecord(BaseModel):
+    id: str
+    version: str
+    digest: str | None = None
+    status: str = "draft"
+
+
+class PublishRecord(BaseModel):
+    schema_version: Literal["workcopilot.publish-record.v1"] = "workcopilot.publish-record.v1"
+    publish_id: str
+    expert: dict[str, Any] = Field(default_factory=dict)
+    registry: dict[str, Any] = Field(default_factory=dict)
+    skills: list[PublishSkillRecord] = Field(default_factory=list)
+    publication: dict[str, Any] = Field(default_factory=dict)
+    stage: Literal["draft", "review", "online"] = "draft"
+    status: str = "started"
+    resume_token: str | None = None
+
+    def to_yaml_dict(self) -> dict[str, Any]:
+        return self.model_dump(mode="python", exclude_none=True)

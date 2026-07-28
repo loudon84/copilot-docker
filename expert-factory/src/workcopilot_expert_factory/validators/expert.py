@@ -9,116 +9,23 @@ import yaml
 
 from workcopilot_expert_factory.adapters.schema_loader import validate_against
 from workcopilot_expert_factory.models import ExpertManifest
+from workcopilot_expert_factory.validators.dependencies import validate_dependencies
+from workcopilot_expert_factory.validators.permissions import validate_permissions
+from workcopilot_expert_factory.validators.security import check_paths, scan_secrets
 
-ValidateLevel = Literal["structure", "schema", "security", "full"]
+ValidateLevel = Literal[
+    "structure",
+    "schema",
+    "security",
+    "dependencies",
+    "runtime",
+    "release",
+    "full",
+]
 
 V1_SCHEMA = "workcopilot.expert.v1"
 LEGACY_INFRA = frozenset({"base", "default"})
 PACKAGE_SCHEMA_HINT = "schema_version"
-
-SECRET_PATTERNS = [
-    (re.compile(r"(?i)(api[_-]?key|secret|password|token|private[_-]?key)\s*[:=]\s*['\"]?[^\s'\"]{8,}"), "possible secret assignment"),
-    (re.compile(r"(?i)-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----"), "private key block"),
-    (re.compile(r"(?i)\bsk-[A-Za-z0-9]{20,}\b"), "openai-like api key"),
-]
-
-FALSE_SECRET_RE = re.compile(
-    r"(?i)("
-    r"password\s*[:=]\s*$|"
-    r"(password|token|secret|api[_-]?key)\s*:\s*(str|optional|bool|int|float|any|dict|none|true|false)|"
-    r"(password|token|secret|api[_-]?key)\s*=\s*(session\.|self\.|auth\.|cfg\.|config\.|os\.|env\.|os\.environ|getenv|_|"
-    r"None|True|False|\"\"|''|\{\}|\[\]|"
-    r"your_|xxx|example|placeholder|changeme|TODO|FIXME)|"
-    r"SQLBOT_PASSWORD|HERMES_.*PASSWORD|getenv\(|environ\[|"
-    r"Field\(|Annotated\["
-    r")"
-)
-
-
-def _looks_like_false_secret(snippet: str) -> bool:
-    if FALSE_SECRET_RE.search(snippet):
-        return True
-    if re.search(r"(?i)(your_|xxx|example|placeholder|changeme|<|\blocal\b|\bnone\b|\bnull\b|\btest\b)", snippet):
-        return True
-    # code references / constructors / slices
-    if re.search(
-        r"(?i)[:=]\s*(str|int|float|bool|dict|list|Exception|Error|None|True|False|os\.|self\.|session\.|"
-        r"config\.|getenv|environ|Field|Optional|Annotated)\b",
-        snippet,
-    ):
-        return True
-    if re.search(r"[:=]\s*[A-Za-z_][A-Za-z0-9_]*\s*[\(\[\.]", snippet):
-        return True
-    # empty / short placeholder values
-    m = re.search(r"[:=]\s*['\"]?([^\s'\"]+)", snippet)
-    if not m:
-        return True
-    val = m.group(1).rstrip(",;)]}")
-    if len(val) < 8:
-        return True
-    if re.match(r"^[A-Za-z_][\w\.]*$", val) and not re.search(r"[0-9]{6,}", val):
-        # identifier-like, not a hard-coded secret blob
-        return True
-    return False
-
-
-def _scan_secrets(root: Path, report: ValidationReport, *, as_warning: bool = False) -> None:
-    skip_dirs = {".git", "__pycache__", ".pytest_cache", "node_modules", ".venv", "venv", "egg-info"}
-    level: Literal["error", "warning"] = "warning" if as_warning else "error"
-    for path in root.rglob("*"):
-        if not path.is_file():
-            continue
-        if any(part in skip_dirs or part.endswith(".egg-info") for part in path.parts):
-            continue
-        if path.suffix.lower() in {".png", ".jpg", ".jpeg", ".gif", ".webp", ".pyc", ".zip", ".tgz"}:
-            continue
-        rel = str(path.relative_to(root)).replace("\\", "/")
-        name_l = path.name.lower()
-        # examples / docs / tests / scripts helpers are allowed to mention password fields
-        if (
-            ".example." in name_l
-            or name_l.endswith(".example")
-            or name_l.endswith(".example.env")
-            or "example.env" in name_l
-            or "/docs/" in f"/{rel}/"
-            or "/prd/" in f"/{rel}/"
-            or "/tests/" in f"/{rel}/"
-            or "/scripts/" in f"/{rel}/"
-            or rel == "config.yaml"
-            or rel.endswith("/config.yaml")
-        ):
-            continue
-        if name_l == ".env" or (name_l.endswith(".env") and "example" not in name_l):
-            report.add(level, "SECRET_DETECTED", "env file must not ship in expert source", rel)
-            continue
-        try:
-            text = path.read_text(encoding="utf-8")
-        except (UnicodeDecodeError, OSError):
-            continue
-        for pattern, label in SECRET_PATTERNS:
-            for match in pattern.finditer(text):
-                snippet = match.group(0)
-                if _looks_like_false_secret(snippet):
-                    continue
-                # private key blocks are always real
-                if "PRIVATE KEY" in snippet.upper():
-                    report.add(level, "SECRET_DETECTED", label, rel)
-                    break
-                # require high-entropy-ish value after assignment
-                val_m = re.search(r"[:=]\s*['\"]?([^\s'\"]+)", snippet)
-                if not val_m:
-                    continue
-                val = val_m.group(1)
-                if val.lower() in {"true", "false", "none", "null", "password", "secret", "token"}:
-                    continue
-                if re.match(r"^[A-Za-z_][A-Za-z0-9_\.]*$", val) and "." in val:
-                    # attribute / env key reference
-                    continue
-                report.add(level, "SECRET_DETECTED", f"{label}: {snippet[:48]}", rel)
-                break
-            else:
-                continue
-            break
 
 UNSAFE_PATH_PARTS = ("..",)
 EXCLUDED_RUNTIME_NAMES = {
@@ -130,6 +37,11 @@ EXCLUDED_RUNTIME_NAMES = {
     "memories",
     "obsidian-vault",
 }
+
+# keep aliases for older imports
+_scan_secrets = scan_secrets
+_check_paths = check_paths
+_validate_permissions = validate_permissions
 
 SKILL_REQUIRED_SECTIONS = [
     "# 技能目标",
@@ -230,25 +142,6 @@ def _check_doc_chars(root: Path, report: ValidationReport, require_zh: bool) -> 
             body = re.sub(r"```.*?```", "", body, flags=re.DOTALL).strip()
             if body and not CJK_RE.search(body):
                 report.add("error", "DOC_REQUIRE_ZH", "body must contain Simplified Chinese", rel)
-
-
-def _check_paths(root: Path, report: ValidationReport) -> None:
-    for path in root.rglob("*"):
-        rel = path.relative_to(root)
-        parts = rel.parts
-        if any(p == ".." for p in parts):
-            report.add("error", "PATH_UNSAFE", "path escape detected", str(rel))
-        if path.is_symlink():
-            target = path.resolve()
-            try:
-                target.relative_to(root.resolve())
-            except ValueError:
-                report.add("error", "PATH_UNSAFE", "symlink escapes expert root", str(rel))
-        name = path.name.lower()
-        if name in EXCLUDED_RUNTIME_NAMES and path.is_dir() and rel.parts[0] in EXCLUDED_RUNTIME_NAMES:
-            # memories may exist in templates historically; warn only for sessions/logs
-            if name in {"sessions", "logs", "webui"}:
-                report.add("warning", "RUNTIME_DIR", f"runtime dir present: {name}", str(rel).replace("\\", "/"))
 
 
 def _validate_structure(root: Path, report: ValidationReport) -> dict[str, Any] | None:
@@ -382,6 +275,13 @@ def _validate_schema(root: Path, data: dict[str, Any], report: ValidationReport)
                 f"skill id {meta['id']!r} != component id {item['id']!r}",
                 skill_rel,
             )
+        if not meta.get("kind"):
+            report.add(
+                "warning",
+                "SKILL_KIND_MISSING",
+                "skill missing kind; required for publish (procedural|general|tool|connector|policy)",
+                skill_rel,
+            )
         missing = [sec for sec in SKILL_REQUIRED_SECTIONS if sec not in body]
         if missing:
             report.add(
@@ -410,32 +310,81 @@ def _validate_schema(root: Path, data: dict[str, Any], report: ValidationReport)
         return None
 
 
-def _validate_permissions(data: dict[str, Any], report: ValidationReport) -> None:
-    perms = data.get("permissions") or {}
-    tools = perms.get("tools") or {}
-    if tools.get("default") != "deny":
-        report.add("error", "PERMISSION_DEFAULT", "permissions.tools.default must be deny")
-    network = perms.get("network") or {}
-    if network.get("default") != "deny":
-        report.add("error", "PERMISSION_DEFAULT", "permissions.network.default must be deny")
+def _validate_release_gates(root: Path, data: dict[str, Any], report: ValidationReport) -> None:
+    release = data.get("release") or {}
+    if not release.get("publishable", True):
+        report.add("error", "E_RELEASE_BUNDLE_REQUIRED", "release.publishable is false")
+    if not (release.get("registry") or {}):
+        report.add(
+            "warning",
+            "RELEASE_REGISTRY_MISSING",
+            "release.registry missing; Dev Bundle allowed, publish forbidden until filled",
+        )
+    # evaluation digest binding checked at build time; here ensure suite exists
+    suite = (data.get("evaluations") or {}).get("suite") or "evaluations/cases.yaml"
+    if not (root / suite).is_file():
+        report.add("error", "E_EVALUATION_REQUIRED", f"missing evaluation suite: {suite}", suite)
+
+
+def validate_branch(path: Path | str, level: ValidateLevel = "full") -> ValidationReport:
+    root = Path(path).resolve()
+    report = ValidationReport(expert_path=str(root), level=level)
+    branch_yaml = root / "branch.yaml"
+    if not branch_yaml.is_file():
+        report.add("error", "E_BRANCH_NOT_FOUND", "missing branch.yaml")
+        return report
+    data = _load_yaml(branch_yaml)
+    if not isinstance(data, dict):
+        report.add("error", "E_SCHEMA_INVALID", "branch.yaml must be a mapping")
+        return report
+    errors = validate_against("expert-branch-v1.schema.json", data)
+    for err in errors:
+        report.add("error", "E_SCHEMA_INVALID", err, "branch.yaml")
+    state = (data.get("state") or {}).get("sync_state")
+    report.summary["sync_state"] = state
+    if state == "conflicted":
+        report.add("error", "E_BRANCH_CONFLICT", "branch is conflicted; resolve before build/publish")
+    overlay = root / "overlay"
+    if not overlay.is_dir():
+        report.add("warning", "BRANCH_OVERLAY", "overlay/ directory missing")
+    return report
 
 
 def validate_expert(path: Path | str, level: ValidateLevel = "full") -> ValidationReport:
     root = Path(path).resolve()
+
+    # Bundle file
+    if root.is_file() and (
+        root.name.endswith(".expert.bundle") or root.suffix in {".bundle", ".zip"}
+    ):
+        from workcopilot_expert_factory.validators.bundle import validate_bundle
+
+        return validate_bundle(root, level=level if level != "structure" else "full")
+
     report = ValidationReport(expert_path=str(root), level=level)
     if not root.is_dir():
         report.add("error", "EXPERT_NOT_FOUND", f"expert directory not found: {root}")
         return report
 
+    # Expert Branch directory
+    if (root / "branch.yaml").is_file():
+        return validate_branch(root, level=level)
+
     require_zh = root.name not in LEGACY_INFRA
     data = _validate_structure(root, report)
     report.summary["directory"] = root.name
 
-    if level in {"structure"} and report.legacy:
+    run_schema = level in {"schema", "security", "dependencies", "runtime", "release", "full"}
+    run_security = level in {"security", "runtime", "release", "full"}
+    run_deps = level in {"dependencies", "release", "full"}
+    run_release = level in {"release", "full"}
+    run_docs = level in {"full", "release", "runtime"}
+
+    if level == "structure" and report.legacy:
         _check_doc_chars(root, report, require_zh=require_zh)
         return report
 
-    if level in {"schema", "security", "full"} and data and _is_v1_manifest(data):
+    if run_schema and data and _is_v1_manifest(data):
         manifest = _validate_schema(root, data, report)
         if manifest:
             report.summary["expert_id"] = manifest.metadata.id
@@ -444,22 +393,26 @@ def validate_expert(path: Path | str, level: ValidateLevel = "full") -> Validati
             report.summary["skills"] = len(manifest.components.skills)
             report.summary["connector_slots"] = len(manifest.connector_slots)
 
-    if level in {"security", "full"}:
-        _scan_secrets(root, report, as_warning=report.legacy)
-        _check_paths(root, report)
+    if run_security:
+        scan_secrets(root, report, as_warning=report.legacy)
+        check_paths(root, report)
+        # sessions/logs warning
+        for name in ("sessions", "logs", "webui"):
+            if (root / name).is_dir():
+                report.add("warning", "RUNTIME_DIR", f"runtime dir present: {name}", name)
         if data and _is_v1_manifest(data):
-            _validate_permissions(data, report)
+            validate_permissions(data, report)
 
-    if level == "full":
+    if run_deps:
+        validate_dependencies(root, report, release_mode=level in {"release", "full"})
+
+    if run_release and data and _is_v1_manifest(data):
+        _validate_release_gates(root, data, report)
+
+    if run_docs:
         _check_doc_chars(root, report, require_zh=require_zh)
-        if data and _is_v1_manifest(data):
-            # full also re-runs schema if not already
-            if "expert_id" not in report.summary:
-                _validate_schema(root, data, report)
-                _validate_permissions(data, report)
-
-    if level == "structure" and data and _is_v1_manifest(data):
-        # structure still checks component paths (already done) + light id match
-        pass
+        if data and _is_v1_manifest(data) and "expert_id" not in report.summary:
+            _validate_schema(root, data, report)
+            validate_permissions(data, report)
 
     return report

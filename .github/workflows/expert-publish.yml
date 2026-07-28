@@ -1,0 +1,87 @@
+name: expert-publish
+
+# Production / test Online publish — never on plain push.
+on:
+  workflow_dispatch:
+    inputs:
+      expert_id:
+        description: Expert ID
+        required: true
+        type: string
+      version:
+        description: Expert version (SemVer)
+        required: true
+        type: string
+      target:
+        description: Nacos target (nacos-dev|nacos-test|nacos-prod)
+        required: true
+        type: choice
+        options:
+          - nacos-dev
+          - nacos-test
+          - nacos-prod
+      stage:
+        description: Publish stage
+        required: true
+        type: choice
+        default: online
+        options:
+          - draft
+          - review
+          - online
+      bundle_artifact:
+        description: Optional path or release asset name; default dist from tag rebuild
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  publish-online:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.target }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Expert Factory
+        run: pip install -e "expert-factory/[dev]"
+      - name: Resolve bundle
+        id: bundle
+        run: |
+          set -euo pipefail
+          EID="${{ inputs.expert_id }}"
+          VER="${{ inputs.version }}"
+          BUNDLE="dist/experts/${EID}-${VER}.expert.bundle"
+          if [[ -n "${{ inputs.bundle_artifact }}" && -f "${{ inputs.bundle_artifact }}" ]]; then
+            BUNDLE="${{ inputs.bundle_artifact }}"
+          elif [[ ! -f "$BUNDLE" ]]; then
+            python -m workcopilot_expert_factory.cli validate "expert-templates/${EID}" --level full
+            python -m workcopilot_expert_factory.cli evaluate "expert-templates/${EID}" --mode full
+            python -m workcopilot_expert_factory.cli build "expert-templates/${EID}" --release --output dist/experts
+          fi
+          test -f "$BUNDLE"
+          echo "path=$BUNDLE" >> "$GITHUB_OUTPUT"
+      - name: Validate release bundle
+        run: python -m workcopilot_expert_factory.cli validate "${{ steps.bundle.outputs.path }}" --level release --format text
+      - name: Publish to Nacos
+        run: |
+          python -m workcopilot_expert_factory.cli publish \
+            "${{ steps.bundle.outputs.path }}" \
+            --target "${{ inputs.target }}" \
+            --stage "${{ inputs.stage }}" \
+            --wait \
+            --update-latest
+        env:
+          NACOS_USERNAME: ${{ secrets.NACOS_USERNAME }}
+          NACOS_PASSWORD: ${{ secrets.NACOS_PASSWORD }}
+          NACOS_ACCESS_TOKEN: ${{ secrets.NACOS_ACCESS_TOKEN }}
+          WORKCOPILOT_NACOS_MOCK: ${{ vars.NACOS_MOCK }}
+      - name: Upload publish record
+        uses: actions/upload-artifact@v4
+        with:
+          name: publish-record-${{ inputs.expert_id }}-${{ inputs.version }}
+          path: .workcopilot/publish/
+          if-no-files-found: warn

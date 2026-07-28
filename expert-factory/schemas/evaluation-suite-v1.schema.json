@@ -26,7 +26,23 @@
         "properties": {
           "id": { "type": "string" },
           "type": {
-            "enum": ["task", "policy", "resilience", "security", "smoke"]
+            "enum": [
+              "task",
+              "policy",
+              "resilience",
+              "security",
+              "smoke",
+              "routing",
+              "output-contract",
+              "prompt-injection",
+              "tool-injection",
+              "secret-exfiltration",
+              "timeout",
+              "malformed-tool-result",
+              "connector-unavailable",
+              "regression",
+              "team-delegation"
+            ]
           },
           "prompt": { "type": "string" },
           "expected": { "type": "object" },

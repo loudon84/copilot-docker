@@ -24,9 +24,13 @@ version: 2.0.0
 
 ```bash
 bash scripts/expert/expert create --brief <brief.yaml> --output expert-templates/<id>
-bash scripts/expert/expert create --brief <brief.yaml> --plan-only
+bash scripts/expert/expert create --requirements <prd.md> --output expert-templates/<id>
+bash scripts/expert/expert create --requirements <prd.md> --plan-only
+bash scripts/expert/expert create --plan <expert-plan.yaml> --output expert-templates/<id>
 bash scripts/expert/expert validate expert-templates/<id> --level structure
 ```
+
+v2.1：支持 Markdown PRD 编译 Brief、组件目录复用扫描、完整 Skill 九章生成与场景化评测用例。
 
 ## 强制规则
 

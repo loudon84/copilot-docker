@@ -20,7 +20,6 @@ jobs:
         id: tag
         run: |
           TAG="${GITHUB_REF_NAME}"
-          # expert/<id>/v<version>
           EXPERT_ID="$(echo "$TAG" | cut -d/ -f2)"
           VERSION="$(echo "$TAG" | cut -d/ -f3 | sed 's/^v//')"
           echo "expert_id=$EXPERT_ID" >> "$GITHUB_OUTPUT"
@@ -51,10 +50,30 @@ jobs:
           VERSION: ${{ steps.tag.outputs.version }}
       - name: Validate
         run: python -m workcopilot_expert_factory.cli validate "expert-templates/${{ steps.tag.outputs.expert_id }}" --level full --format text
-      - name: Evaluate full
+      - name: Evaluate full (isolated Hermes harness)
         run: python -m workcopilot_expert_factory.cli evaluate "expert-templates/${{ steps.tag.outputs.expert_id }}" --mode full --format text
+        env:
+          WORKCOPILOT_QUIET: "1"
       - name: Build release bundle
-        run: python -m workcopilot_expert_factory.cli build "expert-templates/${{ steps.tag.outputs.expert_id }}" --release --output dist/experts
+        run: python -m workcopilot_expert_factory.cli build "expert-templates/${{ steps.tag.outputs.expert_id }}" --release --output dist/experts --signature-mode none
+        env:
+          WORKCOPILOT_SIGNING_KEY: ${{ secrets.WORKCOPILOT_SIGNING_KEY }}
+          SOURCE_DATE_EPOCH: "1700000000"
+      - name: Validate release bundle
+        run: python -m workcopilot_expert_factory.cli validate "dist/experts/${{ steps.tag.outputs.expert_id }}-${{ steps.tag.outputs.version }}.expert.bundle" --level release --format text
+      - name: Nacos Draft Publish
+        if: ${{ vars.NACOS_DRAFT_ON_RELEASE == 'true' }}
+        run: |
+          python -m workcopilot_expert_factory.cli publish \
+            "dist/experts/${{ steps.tag.outputs.expert_id }}-${{ steps.tag.outputs.version }}.expert.bundle" \
+            --target nacos-dev \
+            --stage draft \
+            --overwrite-draft
+        env:
+          WORKCOPILOT_NACOS_MOCK: "1"
+          NACOS_USERNAME: ${{ secrets.NACOS_USERNAME }}
+          NACOS_PASSWORD: ${{ secrets.NACOS_PASSWORD }}
+          NACOS_ACCESS_TOKEN: ${{ secrets.NACOS_ACCESS_TOKEN }}
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:

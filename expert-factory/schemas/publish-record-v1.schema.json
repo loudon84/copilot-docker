@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workcopilot.local/schemas/publish-record-v1.schema.json",
+  "title": "workcopilot.publish-record.v1",
+  "type": "object",
+  "required": ["schema_version", "publish_id", "expert", "registry"],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": { "const": "workcopilot.publish-record.v1" },
+    "publish_id": { "type": "string" },
+    "expert": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "version": { "type": "string" },
+        "bundle_digest": { "type": "string" }
+      }
+    },
+    "registry": {
+      "type": "object",
+      "properties": {
+        "provider": { "type": "string" },
+        "namespace": { "type": "string" },
+        "agent_spec_name": { "type": "string" },
+        "agent_spec_version": { "type": "string" },
+        "status": { "type": "string" },
+        "labels": { "type": "object" },
+        "visibility": { "type": "string" }
+      }
+    },
+    "skills": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "version": { "type": "string" },
+          "digest": { "type": ["string", "null"] },
+          "status": { "type": "string" }
+        }
+      }
+    },
+    "publication": {
+      "type": "object",
+      "properties": {
+        "published_at": { "type": "string" },
+        "published_by": { "type": "string" },
+        "target": { "type": "string" }
+      }
+    },
+    "stage": { "enum": ["draft", "review", "online"] },
+    "status": { "type": "string" },
+    "resume_token": { "type": ["string", "null"] }
+  }
+}

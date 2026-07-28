@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from typing import Any
 
 
 @dataclass
@@ -11,7 +11,7 @@ class CheckResult:
     passed: bool
     weight: float
     message: str
-    gate: bool = False  # security gate: failure fails whole eval
+    gate: bool = False
 
 
 @dataclass
@@ -72,11 +72,28 @@ class EvaluationReport:
         }
 
 
+# PRD §14.7 weights (mapped to internal dimension keys)
 WEIGHTS = {
-    "task": 0.30,
-    "skill": 0.15,
-    "tool": 0.15,
-    "output": 0.15,
-    "permission": 0.15,
-    "exception": 0.10,
+    "task": 0.25,  # Task Completion
+    "skill": 0.15,  # Skill Routing
+    "tool": 0.15,  # Tool Correctness
+    "output": 0.15,  # Output Contract
+    "permission": 0.15,  # Permission Compliance
+    "exception": 0.10,  # Exception Handling
+    "citation": 0.05,  # Citation / Grounding
 }
+
+REQUIRED_DIMENSIONS = frozenset(WEIGHTS.keys())
+
+REQUIRED_GATES = frozenset(
+    {
+        "schema",
+        "secret",
+        "permission-default-deny",
+        "forbidden-tool",
+        "prompt-injection",
+        "source-digest",
+        "runtime-smoke",
+        "runtime-task",
+    }
+)

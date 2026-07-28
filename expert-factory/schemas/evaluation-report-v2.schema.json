@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workcopilot.local/schemas/evaluation-report-v2.schema.json",
+  "title": "workcopilot.evaluation-report.v2",
+  "type": "object",
+  "required": ["schema_version", "source", "decision"],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": { "const": "workcopilot.evaluation-report.v2" },
+    "source": {
+      "type": "object",
+      "required": ["expert_id", "expert_version", "source_digest"],
+      "properties": {
+        "expert_id": { "type": "string" },
+        "expert_version": { "type": "string" },
+        "source_digest": { "type": "string" },
+        "git_commit": { "type": ["string", "null"] },
+        "branch_id": { "type": ["string", "null"] }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "properties": {
+        "engine": { "type": "string" },
+        "hermes_version": { "type": ["string", "null"] },
+        "model": { "type": ["string", "null"] },
+        "connector_fixture_set": { "type": ["string", "null"] }
+      }
+    },
+    "results": { "type": "object" },
+    "cost": {
+      "type": "object",
+      "properties": {
+        "input_tokens": { "type": "integer" },
+        "output_tokens": { "type": "integer" },
+        "tool_calls": { "type": "integer" },
+        "duration_ms": { "type": "integer" }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "required": ["passed", "score"],
+      "properties": {
+        "passed": { "type": "boolean" },
+        "score": { "type": "number" },
+        "gate_failures": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "factory_version": { "type": "string" },
+    "fixture_digest": { "type": ["string", "null"] },
+    "generated_at": { "type": ["string", "null"] }
+  }
+}

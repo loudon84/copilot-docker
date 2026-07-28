@@ -528,7 +528,7 @@ mcp_servers:
 custom_providers:
 - name: localhost
   base_url: http://llm.superic.com:3900/v1
-  api_key: sk-7vR7elPpuczmjpiXxvznXfg6h5MYNsMF8HCWqRNUvOO0PBOd
+  api_key: YOUR_API_KEY_HERE
   model: gemma4:26b
   api_mode: chat_completions
 - name: ollama

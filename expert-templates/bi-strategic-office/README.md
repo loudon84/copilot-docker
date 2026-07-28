@@ -47,6 +47,8 @@ finance_bi_reset
 
 模型不可见：SQLBot 用户名、密码、`access_token`、`chat_id`、加密密钥。
 
+`config.yaml` 中的模型 `api_key` 必须使用占位符（如 `YOUR_API_KEY_HERE` / `local`），禁止提交真实密钥；真实密钥仅通过实例 `.env` 注入。
+
 ## 创建与启动
 
 ```bash

@@ -68,7 +68,7 @@ def test_secret_scan_detects_env(tmp_path: Path) -> None:
     (expert / ".env").write_text("PASSWORD=supersecret123\n", encoding="utf-8")
     report = validate_expert(expert, level="security")
     assert not report.passed
-    assert any(i.code == "SECRET_DETECTED" for i in report.issues)
+    assert any(i.code in {"SECRET_DETECTED", "E_SECRET_DETECTED"} for i in report.issues)
 
 
 def test_create_and_customize(tmp_path: Path) -> None:
