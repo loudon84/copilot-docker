@@ -15,7 +15,7 @@ Brief/PRD → create/customize/branch
          → inject-expert → Hermes container instance
 ```
 
-Factory CLI entry is [[expert-factory/src/workcopilot_expert_factory/cli.py#run]]. Instance lifecycle uses `scripts/create-instance.sh`, `scripts/inject-expert.sh`, and Docker Compose.
+Factory CLI entry is [[expert-factory/src/workcopilot_expert_factory/cli.py#run]]. Instance lifecycle uses `scripts/create-instance.sh`, `scripts/inject-expert.sh`, `scripts/clone-instance.sh` ([[runtime#Runtime Deployment#Instance Capability Clone]]), and Docker Compose.
 
 ## Package Layout
 
@@ -46,7 +46,7 @@ Tag-driven release builds Release Bundles; online Nacos publish is a separate hu
 
 Docker Compose runs Hermes WebUI + Agent API with per-profile volume mounts under `instances/${HERMES_PROFILE}/data/hermes`.
 
-Image build and instance create/up/restart remain shell-script driven (`scripts/build-image.sh`, `scripts/create-instance.sh`). Expert injection maps Manifest components into `HERMES_HOME` without copying secrets from templates.
+Image build and instance create/up/restart remain shell-script driven (`scripts/build-image.sh`, `scripts/create-instance.sh`). Expert injection maps Manifest components into `HERMES_HOME` without copying secrets from templates. Create-only capability cloning between instances is [[runtime#Runtime Deployment#Instance Capability Clone]].
 
 ## Observability and Errors
 

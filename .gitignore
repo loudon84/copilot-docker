@@ -27,3 +27,4 @@ dist/experts/*.sha256
 # Expert evaluation runtime outputs
 evaluations/results/
 .workcopilot/cache/
+instances/

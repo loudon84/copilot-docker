@@ -50,6 +50,14 @@ Templates and Bundles must not ship `.env` or real API keys; scanners cover Bund
 
 Docs/prd/tests may mention password fields; example env files are skipped. Structured events redact sensitive keys ([[expert-factory/src/workcopilot_expert_factory/events.py#_redact]]).
 
+## Create-Only Instance Capability Clone
+
+Clone must refuse existing targets and never overwrite, merge, repair, or upgrade an initialized Hermes instance.
+
+Rationale: capability copy is a provisioning step, not an asset install. `scripts/clone-instance.sh` fails when `instances/<target>` or `hermes-<target>` already exists; there is no `--force`. B keeps unique ports, WebUI password, API key, and Hindsight `bank_id` (`hermes-<B>` / `hermes-<B>-<profile>`). Secrets copy only with `--copy-secrets`.
+
+This is intentionally distinct from Asset Bundle import (merge into existing) and Expert Bundle publish (immutable registry artifact). Failure after B's skeleton is created should remove the new target directory; success writes `.instance-clone.json` as audit metadata, not an authorization bypass. Details: [[runtime#Runtime Deployment#Instance Capability Clone]].
+
 ## Backward Compatible Protocol Growth
 
 v2.1 adds branch/report/publish schemas without breaking `workcopilot.expert.v1` / `skill.v1` / `expert-bundle.v1`.
